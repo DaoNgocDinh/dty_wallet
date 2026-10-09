@@ -1,30 +1,49 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Widget test cho luồng đăng nhập / đăng ký.
 
+import 'package:app/main.dart';
+import 'package:app/screens/home_screen.dart';
+import 'package:app/screens/login_screen.dart';
+import 'package:app/screens/register_screen.dart';
+import 'package:app/widgets/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:app/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('Đăng nhập thành công sẽ vào màn hình chính', (tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.text('Đăng nhập'), findsWidgets); // tiêu đề + nút
+    expect(find.text('Đăng ký'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'nguyenvana',
+    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'matkhau123');
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.tap(find.widgetWithText(AppButton, 'Đăng nhập'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  testWidgets('Nút Đăng ký mở màn hình đăng ký và Trở về quay lại',
+      (tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.widgetWithText(AppButton, 'Đăng ký'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RegisterScreen), findsOneWidget);
+    expect(find.text('Xác thực mật khẩu'), findsOneWidget);
+    expect(find.text('Xác nhận đăng ký'), findsOneWidget);
+    expect(find.text('Trở về'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(AppButton, 'Trở về'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(RegisterScreen), findsNothing);
   });
 }
