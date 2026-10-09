@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../services/api_client.dart';
+import '../state/app_session.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/error_message.dart';
+import 'home_screen.dart';
 import 'register_screen.dart';
+import 'test_login_screen.dart';
 
 /// Màn hình đăng nhập: Tài khoản + Mật khẩu.
 /// Nút "Đăng nhập" để vào app, nút "Đăng ký" chuyển sang màn hình đăng ký.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, required this.onLoginSuccess});
-
-  /// Được gọi khi đăng nhập thành công.
-  final void Function(String account) onLoginSuccess;
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -23,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _accountController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -34,14 +37,27 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
-    setState(() => _isLoading = true);
-    // TODO: thay bằng gọi API POST /api/auth/login của server.
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    widget.onLoginSuccess(_accountController.text.trim());
+    try {
+      final session = AppScope.of(context);
+      await session.login(
+        account: _accountController.text,
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _goToRegister() {
@@ -51,15 +67,22 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _goToTestScreen() {
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const TestLoginScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 64),
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
@@ -69,6 +92,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: IconButton(
+                            onPressed: _goToTestScreen,
+                            icon: const Icon(Icons.science_outlined),
+                            color: AppColors.lightBlue,
+                            tooltip: 'Màn hình test đăng nhập',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         const Center(child: AppLogo(size: 112)),
                         const SizedBox(height: 24),
                         const Text(
@@ -120,7 +153,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 32),
+                        if (_error != null) ...[
+                          const SizedBox(height: 20),
+                          ErrorMessage(message: _error!),
+                        ],
+                        const SizedBox(height: 28),
                         AppButton(
                           text: 'Đăng nhập',
                           isLoading: _isLoading,

@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../services/api_client.dart';
+import '../state/app_session.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/back_label.dart';
+import '../widgets/error_message.dart';
+
+/// Độ dài tối thiểu của mật khẩu, phải khớp với server (MIN_PASSWORD_LENGTH).
+const int kMinPasswordLength = 6;
 
 /// Màn hình đăng ký: Tài khoản + Mật khẩu + Xác thực mật khẩu.
-/// Nút "Trở về" nằm trên cùng bên trái để quay lại màn hình đăng nhập.
+/// Nhãn "Trở về" nằm trên cùng bên trái để quay lại màn hình đăng nhập.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -20,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -32,18 +40,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
-    setState(() => _isLoading = true);
-    // TODO: thay bằng gọi API POST /api/auth/register của server.
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đăng ký thành công, vui lòng đăng nhập')),
-    );
-    Navigator.of(context).pop();
+    try {
+      await AppScope.of(context).register(
+        account: _accountController.text,
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Đăng ký thành công tài khoản "${_accountController.text.trim()}"',
+          ),
+        ),
+      );
+      Navigator.of(context).pop();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _goBack() {
@@ -57,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
               child: Center(
@@ -69,17 +90,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: AppButton(
-                            text: 'Trở về',
-                            style: AppButtonStyle.outline,
-                            icon: Icons.arrow_back_rounded,
-                            expand: false,
-                            onPressed: _goBack,
-                          ),
-                        ),
-                        const SizedBox(height: 28),
+                        BackLabel(onTap: _goBack),
+                        const SizedBox(height: 20),
                         const Center(child: AppLogo(size: 112)),
                         const SizedBox(height: 24),
                         const Text(
@@ -118,7 +130,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 20),
                         AuthTextField(
                           label: 'Mật khẩu',
-                          hintText: 'Nhập mật khẩu của bạn',
+                          hintText: 'Tối thiểu $kMinPasswordLength ký tự',
                           icon: Icons.lock_outline_rounded,
                           controller: _passwordController,
                           obscureText: true,
@@ -126,6 +138,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Vui lòng nhập mật khẩu';
+                            }
+                            if (value.length < kMinPasswordLength) {
+                              return 'Mật khẩu tối thiểu $kMinPasswordLength ký tự';
                             }
                             return null;
                           },
@@ -149,7 +164,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 32),
+                        if (_error != null) ...[
+                          const SizedBox(height: 20),
+                          ErrorMessage(message: _error!),
+                        ],
+                        const SizedBox(height: 28),
                         AppButton(
                           text: 'Xác nhận đăng ký',
                           isLoading: _isLoading,

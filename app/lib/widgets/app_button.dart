@@ -15,7 +15,6 @@ class AppButton extends StatelessWidget {
     this.style = AppButtonStyle.filled,
     this.icon,
     this.isLoading = false,
-    this.expand = true,
   });
 
   final String text;
@@ -24,16 +23,13 @@ class AppButton extends StatelessWidget {
   final IconData? icon;
   final bool isLoading;
 
-  /// true: nút chiếm hết chiều ngang. false: nút vừa đủ bề rộng nội dung.
-  final bool expand;
-
   @override
   Widget build(BuildContext context) {
     final isFilled = style == AppButtonStyle.filled;
     final foreground = isFilled ? Colors.white : AppColors.lightBlue;
 
     return SizedBox(
-      width: expand ? double.infinity : null,
+      width: double.infinity,
       height: 52,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
@@ -65,13 +61,21 @@ class AppButton extends StatelessWidget {
                 ),
               )
             : Row(
+                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (icon != null) ...[
                     Icon(icon, size: 20, color: foreground),
                     const SizedBox(width: 8),
                   ],
-                  Text(text, style: TextStyle(color: foreground)),
+                  Flexible(
+                    child: Text(
+                      text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: foreground),
+                    ),
+                  ),
                 ],
               ),
       ),

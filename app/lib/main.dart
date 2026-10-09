@@ -1,33 +1,41 @@
 import 'package:flutter/material.dart';
 
-import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'state/app_session.dart';
 import 'theme/app_theme.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends StatefulWidget {
+  const MyApp({super.key, this.session});
+
+  /// Dùng cho test: truyền vào session dùng [AuthService] giả.
+  final AppSession? session;
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final AppSession _session = widget.session ?? AppSession();
+
+  @override
+  void dispose() {
+    _session.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ví điện tử',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: Builder(
-        // Builder để context nằm bên dưới Navigator, khi đó mới điều hướng được.
-        builder: (context) => LoginScreen(
-          onLoginSuccess: (account) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute<void>(
-                builder: (_) => HomeScreen(account: account),
-              ),
-            );
-          },
-        ),
+    return AppScope(
+      session: _session,
+      child: MaterialApp(
+        title: 'Ví điện tử',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        home: const LoginScreen(),
       ),
     );
   }
