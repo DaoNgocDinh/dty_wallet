@@ -385,36 +385,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Thống kê nhanh tài chính
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _statItem(
-                            icon: Icons.receipt_long_rounded,
-                            label: 'Giao dịch',
-                            value: '$_transactionCount',
-                            color: Colors.purple,
+                    // 1. Thống kê nhanh tài chính gom vào 1 vùng lớn, không viền từng ô, màu chữ khớp màu icon
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _statItem(
-                            icon: Icons.savings_rounded,
-                            label: 'Quỹ chung',
-                            value: '$_fundCount',
-                            color: Colors.orange,
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _statItem(
+                              icon: Icons.receipt_long_rounded,
+                              label: 'Giao dịch',
+                              value: '$_transactionCount',
+                              color: const Color(0xFF7B1FA2),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _statItem(
-                            icon: Icons.pie_chart_rounded,
-                            label: 'Hũ chi tiêu',
-                            value: '$_jarCount',
-                            color: Colors.teal,
+                          Container(height: 36, width: 1, color: AppColors.border.withValues(alpha: 0.8)),
+                          Expanded(
+                            child: _statItem(
+                              icon: Icons.savings_rounded,
+                              label: 'Quỹ chung',
+                              value: '$_fundCount',
+                              color: const Color(0xFFE53935),
+                            ),
                           ),
-                        ),
-                      ],
+                          Container(height: 36, width: 1, color: AppColors.border.withValues(alpha: 0.8)),
+                          Expanded(
+                            child: _statItem(
+                              icon: Icons.pie_chart_rounded,
+                              label: 'Hũ chi tiêu',
+                              value: '$_jarCount',
+                              color: const Color(0xFF00838F),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 24),
@@ -428,42 +443,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Mục thiết lập mã PIN giao dịch
-                    _menuCard(
-                      icon: Icons.pin_outlined,
-                      iconColor: AppColors.lightBlue,
-                      title: 'Mã PIN giao dịch',
-                      subtitle: _hasPin ? 'Đã cài đặt mã PIN bảo vệ' : 'Chưa cài đặt mã PIN',
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: (_hasPin ? Colors.green : Colors.orange).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _hasPin ? 'Thay đổi' : 'Cài đặt',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _hasPin ? Colors.green[700] : Colors.orange[800],
+                    // 2. Vùng lớn gom nhóm các tính năng Cài đặt & Bảo mật
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
+                        ],
                       ),
-                      onTap: _showSetPinDialog,
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // Mục Đổi mật khẩu
-                    _menuCard(
-                      icon: Icons.lock_reset_rounded,
-                      iconColor: Colors.indigo,
-                      title: 'Đổi mật khẩu',
-                      subtitle: 'Cập nhật mật khẩu đăng nhập tài khoản',
-                      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
-                      onTap: () {
-                        openChangePasswordScreen(context);
-                      },
+                      child: Column(
+                        children: [
+                          _menuRow(
+                            icon: Icons.pin_outlined,
+                            iconColor: AppColors.lightBlue,
+                            title: 'Mã PIN giao dịch',
+                            subtitle: _hasPin ? 'Đã cài đặt mã PIN bảo vệ' : 'Chưa cài đặt mã PIN',
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: (_hasPin ? Colors.green : Colors.orange).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _hasPin ? 'Thay đổi' : 'Cài đặt',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: _hasPin ? Colors.green[700] : Colors.orange[800],
+                                ),
+                              ),
+                            ),
+                            onTap: _showSetPinDialog,
+                            isTop: true,
+                          ),
+                          const Divider(height: 1, indent: 64, endIndent: 16, color: AppColors.border),
+                          _menuRow(
+                            icon: Icons.lock_reset_rounded,
+                            iconColor: Colors.indigo,
+                            title: 'Đổi mật khẩu',
+                            subtitle: 'Cập nhật mật khẩu đăng nhập tài khoản',
+                            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+                            onTap: () {
+                              openChangePasswordScreen(context);
+                            },
+                            isBottom: true,
+                          ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 28),
@@ -486,85 +518,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Mục thống kê không viền, nổi bật icon và chữ với màu chữ đồng bộ màu icon
   Widget _statItem({
     required IconData icon,
     required String label,
     required String value,
     required Color color,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
+    return Material(
+      color: Colors.transparent,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: color, size: 22),
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _menuCard({
+  /// Dòng chức năng cài đặt không viền trong vùng lớn, màu chữ đồng bộ màu icon
+  Widget _menuRow({
     required IconData icon,
     required Color iconColor,
     required String title,
     required String subtitle,
     required Widget trailing,
     required VoidCallback onTap,
+    bool isTop = false,
+    bool isBottom = false,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.vertical(
+          top: isTop ? const Radius.circular(20) : Radius.zero,
+          bottom: isBottom ? const Radius.circular(20) : Radius.zero,
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
               ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                  ),
-                ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: iconColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            trailing,
-          ],
+              trailing,
+            ],
+          ),
         ),
       ),
     );

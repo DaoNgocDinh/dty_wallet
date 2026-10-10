@@ -70,110 +70,105 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          child: Align(
+            alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: kIPhone18Width),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        BackLabel(onTap: _goBack),
-                        const SizedBox(height: 12),
-                        const Center(child: AppLogo(size: 96)),
-                        const SizedBox(height: 18),
-                        const Text(
-                          'Đổi mật khẩu',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Nhập mật khẩu cũ và mật khẩu mới của bạn',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        AuthTextField(
-                          label: 'Mật khẩu cũ',
-                          hintText: 'Nhập mật khẩu hiện tại',
-                          icon: Icons.lock_outline_rounded,
-                          controller: _currentPasswordController,
-                          obscureText: true,
-                          textInputAction: TextInputAction.next,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Vui lòng nhập mật khẩu cũ';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        AuthTextField(
-                          label: 'Mật khẩu mới',
-                          hintText: 'Tối thiểu $kMinPasswordLength ký tự',
-                          icon: Icons.lock_reset_rounded,
-                          controller: _newPasswordController,
-                          obscureText: true,
-                          textInputAction: TextInputAction.next,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Vui lòng nhập mật khẩu mới';
-                            }
-                            if (value.length < kMinPasswordLength) {
-                              return 'Mật khẩu mới tối thiểu $kMinPasswordLength ký tự';
-                            }
-                            if (value == _currentPasswordController.text) {
-                              return 'Mật khẩu mới phải khác mật khẩu cũ';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        AuthTextField(
-                          label: 'Xác thực mật khẩu',
-                          hintText: 'Nhập lại mật khẩu mới',
-                          icon: Icons.verified_user_outlined,
-                          controller: _confirmPasswordController,
-                          obscureText: true,
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) { _handleChangePassword(); },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Vui lòng xác thực mật khẩu mới';
-                            }
-                            if (value != _newPasswordController.text) {
-                              return 'Xác thực mật khẩu không khớp';
-                            }
-                            return null;
-                          },
-                        ),
-                        if (_error != null) ...[
-                          const SizedBox(height: 20),
-                          ErrorMessage(message: _error!),
-                        ],
-                        const SizedBox(height: 28),
-                        AppButton(
-                          text: 'Xác nhận đổi mật khẩu',
-                          isLoading: _isLoading,
-                          onPressed: _handleChangePassword,
-                        ),
-                      ],
+              constraints: const BoxConstraints(maxWidth: kIPhone18Width),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    BackLabel(onTap: _goBack),
+                    const SizedBox(height: 14),
+                    const Center(child: AppLogo(size: 96)),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Đổi mật khẩu',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Nhập mật khẩu cũ và mật khẩu mới của bạn',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    AuthTextField(
+                      label: 'Mật khẩu cũ',
+                      hintText: 'Nhập mật khẩu hiện tại',
+                      icon: Icons.lock_outline_rounded,
+                      controller: _currentPasswordController,
+                      obscureText: true,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Vui lòng nhập mật khẩu cũ';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    AuthTextField(
+                      label: 'Mật khẩu mới',
+                      hintText: 'Tối thiểu $kMinPasswordLength ký tự',
+                      icon: Icons.lock_reset_rounded,
+                      controller: _newPasswordController,
+                      obscureText: true,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Vui lòng nhập mật khẩu mới';
+                        }
+                        if (value.length < kMinPasswordLength) {
+                          return 'Mật khẩu mới tối thiểu $kMinPasswordLength ký tự';
+                        }
+                        if (value == _currentPasswordController.text) {
+                          return 'Mật khẩu mới phải khác mật khẩu cũ';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    AuthTextField(
+                      label: 'Xác thực mật khẩu',
+                      hintText: 'Nhập lại mật khẩu mới',
+                      icon: Icons.verified_user_outlined,
+                      controller: _confirmPasswordController,
+                      obscureText: true,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) { _handleChangePassword(); },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Vui lòng xác thực mật khẩu mới';
+                        }
+                        if (value != _newPasswordController.text) {
+                          return 'Xác thực mật khẩu không khớp';
+                        }
+                        return null;
+                      },
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 20),
+                      ErrorMessage(message: _error!),
+                    ],
+                    const SizedBox(height: 32),
+                    AppButton(
+                      text: 'Xác nhận đổi mật khẩu',
+                      isLoading: _isLoading,
+                      onPressed: _handleChangePassword,
+                    ),
+                  ],
                 ),
               ),
             ),

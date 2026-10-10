@@ -108,7 +108,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: 'Số tiền nạp (VND)',
-                  prefixIcon: Icon(Icons.monetization_on_outlined, color: AppColors.lightBlue),
+                  prefixIcon: Icon(
+                    Icons.monetization_on_outlined,
+                    color: AppColors.lightBlue,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -116,18 +119,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 initialValue: selectedSource,
                 decoration: const InputDecoration(
                   labelText: 'Nguồn tiền',
-                  prefixIcon: Icon(Icons.account_balance_outlined, color: AppColors.lightBlue),
+                  prefixIcon: Icon(
+                    Icons.account_balance_outlined,
+                    color: AppColors.lightBlue,
+                  ),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Vietcombank (Liên kết)', child: Text('Vietcombank (Liên kết)')),
-                  DropdownMenuItem(value: 'MB Bank (QR Pay)', child: Text('MB Bank (QR Pay)')),
-                  DropdownMenuItem(value: 'Thẻ Quốc tế (Visa/Mastercard)', child: Text('Thẻ Quốc tế (Visa/Mastercard)')),
+                  DropdownMenuItem(
+                    value: 'Vietcombank (Liên kết)',
+                    child: Text('Vietcombank (Liên kết)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'MB Bank (QR Pay)',
+                    child: Text('MB Bank (QR Pay)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Thẻ Quốc tế (Visa/Mastercard)',
+                    child: Text('Thẻ Quốc tế (Visa/Mastercard)'),
+                  ),
                 ],
-                onChanged: (v) => setSheetState(() => selectedSource = v ?? selectedSource),
+                onChanged: (v) =>
+                    setSheetState(() => selectedSource = v ?? selectedSource),
               ),
               if (sheetError != null) ...[
                 const SizedBox(height: 10),
-                Text(sheetError!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                Text(
+                  sheetError!,
+                  style: const TextStyle(color: AppColors.error, fontSize: 13),
+                ),
               ],
               const SizedBox(height: 20),
               AppButton(
@@ -136,7 +155,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () async {
                   final amount = double.tryParse(amountController.text);
                   if (amount == null || amount <= 0) {
-                    setSheetState(() => sheetError = 'Vui lòng nhập số tiền hợp lệ');
+                    setSheetState(
+                      () => sheetError = 'Vui lòng nhập số tiền hợp lệ',
+                    );
                     return;
                   }
                   setSheetState(() {
@@ -155,12 +176,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     navigator.pop();
                     _loadWallet();
                     messenger.showSnackBar(
-                      SnackBar(content: Text('Yêu cầu nạp ${amount.toStringAsFixed(0)} đ đã được ghi nhận!')),
+                      SnackBar(
+                        content: Text(
+                          'Yêu cầu nạp ${amount.toStringAsFixed(0)} đ đã được ghi nhận!',
+                        ),
+                      ),
                     );
                   } on ApiException catch (e) {
                     setSheetState(() => sheetError = e.message);
                   } catch (_) {
-                    setSheetState(() => sheetError = 'Không thể nạp tiền, vui lòng thử lại');
+                    setSheetState(
+                      () => sheetError = 'Không thể nạp tiền, vui lòng thử lại',
+                    );
                   } finally {
                     setSheetState(() => isSubmitting = false);
                   }
@@ -207,7 +234,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Text(
                       isData ? 'Nạp gói Data 4G/5G' : 'Nạp tiền điện thoại',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close_rounded),
@@ -236,10 +266,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: const InputDecoration(labelText: 'Nhà mạng'),
                   items: const [
                     DropdownMenuItem(value: 'Viettel', child: Text('Viettel')),
-                    DropdownMenuItem(value: 'Vinaphone', child: Text('Vinaphone')),
-                    DropdownMenuItem(value: 'Mobifone', child: Text('Mobifone')),
+                    DropdownMenuItem(
+                      value: 'Vinaphone',
+                      child: Text('Vinaphone'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Mobifone',
+                      child: Text('Mobifone'),
+                    ),
                   ],
-                  onChanged: (v) => setSheetState(() => selectedCarrier = v ?? selectedCarrier),
+                  onChanged: (v) => setSheetState(
+                    () => selectedCarrier = v ?? selectedCarrier,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -247,11 +285,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
                     labelText: 'Số điện thoại',
-                    prefixIcon: Icon(Icons.phone_iphone_rounded, color: AppColors.lightBlue),
+                    prefixIcon: Icon(
+                      Icons.phone_iphone_rounded,
+                      color: AppColors.lightBlue,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text('Chọn mệnh giá:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Chọn mệnh giá:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -260,7 +304,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     return ChoiceChip(
                       label: Text('${amt.toStringAsFixed(0)} đ'),
                       selected: sel,
-                      onSelected: (_) => setSheetState(() => selectedAmount = amt),
+                      onSelected: (_) =>
+                          setSheetState(() => selectedAmount = amt),
                     );
                   }).toList(),
                 ),
@@ -272,13 +317,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   maxLength: 6,
                   decoration: const InputDecoration(
                     labelText: 'Mã PIN giao dịch',
-                    prefixIcon: Icon(Icons.pin_outlined, color: AppColors.lightBlue),
+                    prefixIcon: Icon(
+                      Icons.pin_outlined,
+                      color: AppColors.lightBlue,
+                    ),
                     counterText: '',
                   ),
                 ),
                 if (sheetError != null) ...[
                   const SizedBox(height: 10),
-                  Text(sheetError!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                  Text(
+                    sheetError!,
+                    style: const TextStyle(
+                      color: AppColors.error,
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 16),
                 AppButton(
@@ -288,7 +342,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     final phone = phoneController.text.trim();
                     final pin = pinController.text.trim();
                     if (phone.isEmpty || pin.isEmpty) {
-                      setSheetState(() => sheetError = 'Vui lòng nhập số điện thoại và mã PIN');
+                      setSheetState(
+                        () => sheetError =
+                            'Vui lòng nhập số điện thoại và mã PIN',
+                      );
                       return;
                     }
                     setSheetState(() {
@@ -309,12 +366,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       navigator.pop();
                       _loadWallet();
                       messenger.showSnackBar(
-                        SnackBar(content: Text('Nạp tiền cho $phone thành công!')),
+                        SnackBar(
+                          content: Text('Nạp tiền cho $phone thành công!'),
+                        ),
                       );
                     } on ApiException catch (e) {
                       setSheetState(() => sheetError = e.message);
                     } catch (_) {
-                      setSheetState(() => sheetError = 'Giao dịch thất bại, vui lòng thử lại');
+                      setSheetState(
+                        () =>
+                            sheetError = 'Giao dịch thất bại, vui lòng thử lại',
+                      );
                     } finally {
                       setSheetState(() => isSubmitting = false);
                     }
@@ -361,7 +423,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 future: AppScope.of(context).fetchTransactions(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: AppColors.lightBlue));
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.lightBlue,
+                      ),
+                    );
                   }
                   if (snapshot.hasError) {
                     return Center(child: Text('Lỗi tải: ${snapshot.error}'));
@@ -369,7 +435,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   final list = (snapshot.data?['data'] as List?) ?? [];
                   if (list.isEmpty) {
                     return const Center(
-                      child: Text('Chưa có giao dịch nào được ghi nhận', style: TextStyle(color: AppColors.textSecondary)),
+                      child: Text(
+                        'Chưa có giao dịch nào được ghi nhận',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                     );
                   }
                   return ListView.separated(
@@ -383,24 +452,48 @@ class _HomeScreenState extends State<HomeScreen> {
                       final status = item['status'] ?? 'pending';
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: AppColors.lightBlue.withValues(alpha: 0.15),
-                          child: const Icon(Icons.receipt_rounded, color: AppColors.lightBlue, size: 20),
+                          backgroundColor: AppColors.lightBlue.withValues(
+                            alpha: 0.15,
+                          ),
+                          child: const Icon(
+                            Icons.receipt_rounded,
+                            color: AppColors.lightBlue,
+                            size: 20,
+                          ),
                         ),
-                        title: Text('$type', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                        subtitle: Text('$code', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        title: Text(
+                          '$type',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '$code',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
                               '${amount.toString()} đ',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                             Text(
                               '$status',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: status == 'completed' ? Colors.green : Colors.orange,
+                                color: status == 'completed'
+                                    ? Colors.green
+                                    : Colors.orange,
                               ),
                             ),
                           ],
@@ -447,7 +540,10 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Thanh toán hoá đơn', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Thanh toán hoá đơn',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.close_rounded),
                     onPressed: () => Navigator.of(sheetCtx).pop(),
@@ -459,9 +555,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 initialValue: billType,
                 decoration: const InputDecoration(labelText: 'Loại hoá đơn'),
                 items: const [
-                  DropdownMenuItem(value: 'Điện (EVN)', child: Text('Điện (EVN)')),
-                  DropdownMenuItem(value: 'Nước sinh hoạt', child: Text('Nước sinh hoạt')),
-                  DropdownMenuItem(value: 'Internet / Truyền hình', child: Text('Internet / Truyền hình')),
+                  DropdownMenuItem(
+                    value: 'Điện (EVN)',
+                    child: Text('Điện (EVN)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Nước sinh hoạt',
+                    child: Text('Nước sinh hoạt'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Internet / Truyền hình',
+                    child: Text('Internet / Truyền hình'),
+                  ),
                 ],
                 onChanged: (v) => setSheetState(() => billType = v ?? billType),
               ),
@@ -470,7 +575,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 controller: codeController,
                 decoration: const InputDecoration(
                   labelText: 'Mã khách hàng / Hợp đồng',
-                  prefixIcon: Icon(Icons.badge_outlined, color: AppColors.lightBlue),
+                  prefixIcon: Icon(
+                    Icons.badge_outlined,
+                    color: AppColors.lightBlue,
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -479,7 +587,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: 'Số tiền thanh toán',
-                  prefixIcon: Icon(Icons.monetization_on_outlined, color: AppColors.lightBlue),
+                  prefixIcon: Icon(
+                    Icons.monetization_on_outlined,
+                    color: AppColors.lightBlue,
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -490,13 +601,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 maxLength: 6,
                 decoration: const InputDecoration(
                   labelText: 'Mã PIN giao dịch',
-                  prefixIcon: Icon(Icons.pin_outlined, color: AppColors.lightBlue),
+                  prefixIcon: Icon(
+                    Icons.pin_outlined,
+                    color: AppColors.lightBlue,
+                  ),
                   counterText: '',
                 ),
               ),
               if (sheetError != null) ...[
                 const SizedBox(height: 10),
-                Text(sheetError!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                Text(
+                  sheetError!,
+                  style: const TextStyle(color: AppColors.error, fontSize: 13),
+                ),
               ],
               const SizedBox(height: 16),
               AppButton(
@@ -507,7 +624,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   final amount = double.tryParse(amountController.text) ?? 0;
                   final pin = pinController.text.trim();
                   if (code.isEmpty || amount <= 0 || pin.isEmpty) {
-                    setSheetState(() => sheetError = 'Vui lòng điền đủ mã KH, số tiền và mã PIN');
+                    setSheetState(
+                      () => sheetError =
+                          'Vui lòng điền đủ mã KH, số tiền và mã PIN',
+                    );
                     return;
                   }
                   setSheetState(() {
@@ -528,12 +648,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     navigator.pop();
                     _loadWallet();
                     messenger.showSnackBar(
-                      SnackBar(content: Text('Thanh toán hoá đơn $code thành công!')),
+                      SnackBar(
+                        content: Text('Thanh toán hoá đơn $code thành công!'),
+                      ),
                     );
                   } on ApiException catch (e) {
                     setSheetState(() => sheetError = e.message);
                   } catch (_) {
-                    setSheetState(() => sheetError = 'Thanh toán thất bại, vui lòng thử lại');
+                    setSheetState(
+                      () =>
+                          sheetError = 'Thanh toán thất bại, vui lòng thử lại',
+                    );
                   } finally {
                     setSheetState(() => isSubmitting = false);
                   }
@@ -563,7 +688,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Quỹ tiết kiệm & Đầu tư', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Quỹ tiết kiệm & Đầu tư',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => Navigator.of(sheetCtx).pop(),
@@ -576,12 +704,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 future: AppScope.of(context).fetchFunds(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: AppColors.lightBlue));
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.lightBlue,
+                      ),
+                    );
                   }
                   final list = (snapshot.data?['data'] as List?) ?? [];
                   if (list.isEmpty) {
                     return const Center(
-                      child: Text('Chưa có quỹ nào được tạo', style: TextStyle(color: AppColors.textSecondary)),
+                      child: Text(
+                        'Chưa có quỹ nào được tạo',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                     );
                   }
                   return ListView.builder(
@@ -590,15 +725,38 @@ class _HomeScreenState extends State<HomeScreen> {
                       final item = list[index] as Map<String, dynamic>;
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: const BorderSide(
+                            color: Color(0xFFE53935),
+                            width: 1.2,
+                          ),
+                        ),
                         child: ListTile(
                           leading: const CircleAvatar(
-                            backgroundColor: Colors.amber,
-                            child: Icon(Icons.groups_rounded, color: Colors.white),
+                            backgroundColor: Color(0xFFE53935),
+                            child: Icon(
+                              Icons.groups_rounded,
+                              color: Colors.white,
+                            ),
                           ),
-                          title: Text(item['name'] ?? 'Quỹ', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Loại: ${item['fundType'] ?? 'Tiết kiệm'}'),
-                          trailing: Text('${item['targetAmount'] ?? 0} đ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Text(
+                            item['name'] ?? 'Quỹ',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFE53935),
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Loại: ${item['fundType'] ?? 'Tiết kiệm'}',
+                          ),
+                          trailing: Text(
+                            '${item['targetAmount'] ?? 0} đ',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFE53935),
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -629,7 +787,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Hũ chi tiêu (6 Jars)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Hũ chi tiêu (6 Jars)',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => Navigator.of(sheetCtx).pop(),
@@ -642,12 +803,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 future: AppScope.of(context).fetchSpendingJars(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: AppColors.lightBlue));
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.lightBlue,
+                      ),
+                    );
                   }
                   final list = (snapshot.data?['data'] as List?) ?? [];
                   if (list.isEmpty) {
                     return const Center(
-                      child: Text('Chưa có hũ chi tiêu nào', style: TextStyle(color: AppColors.textSecondary)),
+                      child: Text(
+                        'Chưa có hũ chi tiêu nào',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                     );
                   }
                   return ListView.builder(
@@ -656,14 +824,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       final item = list[index] as Map<String, dynamic>;
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         child: ListTile(
                           leading: const CircleAvatar(
                             backgroundColor: Colors.teal,
-                            child: Icon(Icons.all_inbox_rounded, color: Colors.white),
+                            child: Icon(
+                              Icons.all_inbox_rounded,
+                              color: Colors.white,
+                            ),
                           ),
-                          title: Text(item['name'] ?? 'Hũ chi tiêu', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          trailing: Text('${item['balance'] ?? 0} đ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Text(
+                            item['name'] ?? 'Hũ chi tiêu',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          trailing: Text(
+                            '${item['balance'] ?? 0} đ',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       );
                     },
@@ -727,7 +906,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.lightBlue.withValues(alpha: 0.15),
+                                color: AppColors.lightBlue.withValues(
+                                  alpha: 0.15,
+                                ),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -764,14 +945,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [AppColors.lightBlue, AppColors.lightBlueDark],
+                              colors: [
+                                AppColors.lightBlue,
+                                AppColors.lightBlueDark,
+                              ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(22),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.lightBlue.withValues(alpha: 0.35),
+                                color: AppColors.lightBlue.withValues(
+                                  alpha: 0.35,
+                                ),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6),
                               ),
@@ -799,20 +985,62 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: Icon(
-                                      _isBalanceHidden
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
-                                      color: Colors.white70,
-                                      size: 19,
+                                  // Nút ẩn / hiện số dư nổi bật
+                                  Tooltip(
+                                    message: _isBalanceHidden
+                                        ? 'Hiện số dư'
+                                        : 'Ẩn số dư',
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(
+                                          () => _isBalanceHidden =
+                                              !_isBalanceHidden,
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4.5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.22,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.7,
+                                            ),
+                                            width: 1.2,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(
+                                                alpha: 0.08,
+                                              ),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              _isBalanceHidden
+                                                  ? Icons.visibility_off_rounded
+                                                  : Icons.visibility_rounded,
+                                              color: Colors.white,
+                                              size: 15,
+                                            ),
+                                            const SizedBox(width: 4),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                    onPressed: () {
-                                      setState(() => _isBalanceHidden = !_isBalanceHidden);
-                                    },
-                                    tooltip: _isBalanceHidden ? 'Hiện số dư' : 'Ẩn số dư',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
                                   ),
                                 ],
                               ),
@@ -825,48 +1053,105 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              if (_isBalanceHidden)
-                                const Text(
-                                  '•••••••• đ',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 2,
+                              // Dòng hiển thị số dư và nút + Nạp tiền trên cùng một dòng
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: _isBalanceHidden
+                                        ? const Text(
+                                            '•••••••• đ',
+                                            style: TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              letterSpacing: 2,
+                                            ),
+                                          )
+                                        : _walletMessage != null
+                                        ? Text(
+                                            _walletMessage!,
+                                            style: const TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          )
+                                        : _walletError != null
+                                        ? Text(
+                                            _walletError!,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: Color(0xFFFFCDD2),
+                                            ),
+                                          )
+                                        : const Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: SizedBox(
+                                              height: 24,
+                                              width: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
                                   ),
-                                )
-                              else if (_walletMessage != null)
-                                Text(
-                                  _walletMessage!,
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: () => _showDepositSheet(context),
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 11,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.12,
+                                            ),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.add_rounded,
+                                            color: AppColors.lightBlueDark,
+                                            size: 16,
+                                          ),
+                                          SizedBox(width: 3),
+                                          Text(
+                                            'Nạp tiền',
+                                            style: TextStyle(
+                                              color: AppColors.lightBlueDark,
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                )
-                              else if (_walletError != null)
-                                Text(
-                                  _walletError!,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFFFFCDD2),
-                                  ),
-                                )
-                              else
-                                const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                                ],
+                              ),
                               const SizedBox(height: 12),
-                              // Lời chào người dùng & nút nạp nhanh
+                              // Lời chào người dùng
                               Row(
                                 children: [
-                                  const Icon(Icons.person_pin_circle_rounded, color: Colors.white70, size: 16),
+                                  const Icon(
+                                    Icons.person_pin_circle_rounded,
+                                    color: Colors.white70,
+                                    size: 16,
+                                  ),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
@@ -878,32 +1163,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                   ),
-                                  InkWell(
-                                    onTap: () => _showDepositSheet(context),
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.22),
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.add_rounded, color: Colors.white, size: 14),
-                                          SizedBox(width: 2),
-                                          Text(
-                                            'Nạp tiền',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
                                 ],
                               ),
                             ],
@@ -912,7 +1171,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         const SizedBox(height: 18),
 
-                        // 2. DƯỚI HIỂN THỊ CÁC BUTTON NHỎ CÁC TÍNH NĂNG (ĐÃ BỎ DẤU +)
+                        // 2. VÙNG LỚN CHỨA CÁC NÚT TÍNH NĂNG CHỨC NĂNG
                         const Text(
                           'Dịch vụ & Tính năng',
                           style: TextStyle(
@@ -923,65 +1182,84 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Lưới 6 tính năng yêu cầu (không có dấu + ở đầu)
-                        GridView.count(
-                          crossAxisCount: 3,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 0.98,
-                          children: [
-                            _featureButton(
-                              label: 'Nạp ví',
-                              icon: Icons.add_card_rounded,
-                              iconColor: const Color(0xFF2E7D32),
-                              onTap: () => _showDepositSheet(context),
-                            ),
-                            _featureButton(
-                              label: 'Nạp đt/data',
-                              icon: Icons.phone_iphone_rounded,
-                              iconColor: const Color(0xFFEF6C00),
-                              onTap: () => _showTopupSheet(context),
-                            ),
-                            _featureButton(
-                              label: 'L.sử giao dịch',
-                              icon: Icons.receipt_long_rounded,
-                              iconColor: const Color(0xFF7B1FA2),
-                              onTap: () => _showHistorySheet(context),
-                            ),
-                            _featureButton(
-                              label: 'Thanh toán hđ',
-                              icon: Icons.receipt_outlined,
-                              iconColor: const Color(0xFFC2185B),
-                              onTap: () => _showBillPaymentSheet(context),
-                            ),
-                            _featureButton(
-                              label: 'Quỹ',
-                              icon: Icons.groups_rounded,
-                              iconColor: const Color(0xFFF57F17),
-                              onTap: () => _showFundsSheet(context),
-                            ),
-                            _featureButton(
-                              label: 'Hũ chi tiêu',
-                              icon: Icons.all_inbox_rounded,
-                              iconColor: const Color(0xFF00838F),
-                              onTap: () => _showJarsSheet(context),
-                            ),
-                          ],
+                        // Vùng lớn gom chung toàn bộ 6 nút chức năng, bo góc, bóng mờ đồng bộ
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: AppColors.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: GridView.count(
+                            crossAxisCount: 3,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            mainAxisSpacing: 10,
+                            crossAxisSpacing: 8,
+                            childAspectRatio: 1.05,
+                            children: [
+                              _featureButton(
+                                label: 'Nạp ví',
+                                icon: Icons.add_card_rounded,
+                                iconColor: const Color(0xFF2E7D32),
+                                onTap: () => _showDepositSheet(context),
+                              ),
+                              _featureButton(
+                                label: 'Nạp đt/data',
+                                icon: Icons.phone_iphone_rounded,
+                                iconColor: const Color(0xFFEF6C00),
+                                onTap: () => _showTopupSheet(context),
+                              ),
+                              _featureButton(
+                                label: 'L.sử giao dịch',
+                                icon: Icons.receipt_long_rounded,
+                                iconColor: const Color(0xFF7B1FA2),
+                                onTap: () => _showHistorySheet(context),
+                              ),
+                              _featureButton(
+                                label: 'Thanh toán hđ',
+                                icon: Icons.receipt_outlined,
+                                iconColor: const Color(0xFFC2185B),
+                                onTap: () => _showBillPaymentSheet(context),
+                              ),
+                              _featureButton(
+                                label: 'Quỹ',
+                                icon: Icons.groups_rounded,
+                                iconColor: const Color(0xFFE53935),
+                                onTap: () => _showFundsSheet(context),
+                              ),
+                              _featureButton(
+                                label: 'Hũ chi tiêu',
+                                icon: Icons.all_inbox_rounded,
+                                iconColor: const Color(0xFF00838F),
+                                onTap: () => _showJarsSheet(context),
+                              ),
+                            ],
+                          ),
                         ),
 
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 16),
 
-                        // 3. PHẦN QUẢN LÝ TÀI CHÍNH (CÂN BẰNG PHẦN DƯỚI GIAO DIỆN)
-                        _buildFinancialSection(context),
-
-                        const SizedBox(height: 14),
-
-                        // 4. PHẦN HOẠT ĐỘNG GẦN ĐÂY & LỊCH SỬ
+                        // 3. HOẠT ĐỘNG GẦN ĐÂY & LỊCH SỬ THU CHI
                         _buildRecentActivitySection(context),
 
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
+
+                        // 4. ƯU ĐÃI & KHUYẾN MÃI (LÀM ĐẦY VÀ CÂN ĐỐI PHẦN DƯỚI GIAO DIỆN)
+                        _buildPromotionsSection(context),
+
+                        const SizedBox(height: 16),
 
                         // 5. BANNER BẢO MẬT DƯỚI CÙNG
                         _buildSecurityFooter(),
@@ -989,118 +1267,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Khối Quản lý tài chính: Quỹ tiết kiệm & 6 Hũ chi tiêu
-  Widget _buildFinancialSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Quản lý tài chính',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _infoCard(
-                title: 'Quỹ tiết kiệm',
-                subtitle: 'Mục tiêu & Đầu tư',
-                icon: Icons.groups_rounded,
-                color: const Color(0xFFF57F17),
-                onTap: () => _showFundsSheet(context),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _infoCard(
-                title: '6 Hũ chi tiêu',
-                subtitle: 'Phân bổ ngân sách',
-                icon: Icons.all_inbox_rounded,
-                color: const Color(0xFF00838F),
-                onTap: () => _showJarsSheet(context),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  /// Thẻ thông tin tài chính bo góc hiện đại
-  Widget _infoCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 13,
-                  color: AppColors.textSecondary.withValues(alpha: 0.6),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -1136,7 +1302,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: AppColors.lightBlue.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.receipt_long_rounded, color: AppColors.lightBlue, size: 20),
+              child: const Icon(
+                Icons.receipt_long_rounded,
+                color: AppColors.lightBlue,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             const Expanded(
@@ -1154,12 +1324,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   SizedBox(height: 2),
                   Text(
                     'Xem toàn bộ lịch sử thu chi của bạn',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
           ],
         ),
       ),
@@ -1173,7 +1350,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shield_outlined, size: 14, color: AppColors.textSecondary.withValues(alpha: 0.8)),
+          Icon(
+            Icons.shield_outlined,
+            size: 14,
+            color: AppColors.textSecondary.withValues(alpha: 0.8),
+          ),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
@@ -1191,58 +1372,187 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Nút nhỏ tính năng dạng hình vuông bo tròn (Squircle)
-  Widget _featureButton({
-    required String label,
+  /// Khối Ưu đãi & Tiện ích giúp giao diện đầy đặn, không bị trống
+  Widget _buildPromotionsSection(BuildContext context) {
+    final loginTime = AppScope.of(context).loginTime ?? DateTime.now();
+    final hour = loginTime.hour.toString().padLeft(2, '0');
+    final minute = loginTime.minute.toString().padLeft(2, '0');
+    final day = loginTime.day.toString().padLeft(2, '0');
+    final month = loginTime.month.toString().padLeft(2, '0');
+    final year = loginTime.year;
+    final updateTimeStr = 'Cập nhật lúc $hour:$minute - $day/$month/$year';
+    final currentMonth = DateTime.now().month;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Ưu đãi & Khuyến mãi',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        // 1. Lập quỹ tiết kiệm cho bản thân và gia đình
+        _buildPromoCard(
+          context: context,
+          icon: Icons.savings_rounded,
+          iconColor: const Color(0xFFE53935),
+          title: 'Lập quỹ tiết kiệm cho bản thân và gia đình',
+          subtitle: 'Tạo quỹ cá nhân, cặp đôi, tích luỹ, ...',
+          onTap: () => _showFundsSheet(context),
+        ),
+        const SizedBox(height: 10),
+        // 2. Chi tiêu tháng (số tháng thay đổi theo thời gian thực & cập nhật theo thời gian đăng nhập)
+        _buildPromoCard(
+          context: context,
+          icon: Icons.pie_chart_rounded,
+          iconColor: const Color(0xFF00838F),
+          title: 'Chi tiêu tháng $currentMonth',
+          subtitle: updateTimeStr,
+          onTap: () => _showJarsSheet(context),
+        ),
+        const SizedBox(height: 10),
+        // 3. Ưu đãi hoàn tiền thanh toán hoá đơn
+        _buildPromoCard(
+          context: context,
+          icon: Icons.percent_rounded,
+          iconColor: const Color(0xFFEF6C00),
+          title: 'Hoàn tiền 10% thanh toán hoá đơn',
+          subtitle: 'Áp dụng cho hoá đơn điện, nước sinh hoạt',
+          onTap: () => _showBillPaymentSheet(context),
+        ),
+      ],
+    );
+  }
+
+  /// Thẻ ưu đãi / tiện ích có thể bấm tương tác
+  Widget _buildPromoCard({
+    required BuildContext context,
     required IconData icon,
     required Color iconColor,
+    required String title,
+    required String subtitle,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.025),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(13),
+                color: iconColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: iconColor, size: 24),
+              child: Icon(icon, color: iconColor, size: 20),
             ),
-            const SizedBox(height: 7),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Nút chức năng không viền, làm nổi bật icon và chữ với màu chữ đồng bộ với màu icon.
+  /// Riêng mục Quỹ có khung viền đỏ làm nổi bật.
+  Widget _featureButton({
+    required String label,
+    required IconData icon,
+    required Color iconColor,
+    required VoidCallback onTap,
+    bool hasBorder = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: iconColor.withValues(alpha: hasBorder ? 1.0 : 0.25),
+                    width: hasBorder ? 1.6 : 1.0,
+                  ),
+                ),
+                child: Icon(icon, color: iconColor, size: 25),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: iconColor,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

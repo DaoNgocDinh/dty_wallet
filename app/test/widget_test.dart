@@ -463,6 +463,79 @@ void main() {
     expect(formatVnd(50000), '50.000 đ');
     expect(formatVnd(null), '0 đ');
   });
+
+  testWidgets('Trang chủ: Nút ẩn/hiện số dư nổi bật và hoạt động chính xác', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await _login(tester, account: 'admin', password: '123456');
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    // Ban đầu hiển thị số dư và nút "Ẩn"
+    expect(find.text('1.000.000 đ'), findsOneWidget);
+    expect(find.text('Ẩn'), findsOneWidget);
+
+    // Bấm nút Ẩn
+    await tester.tap(find.text('Ẩn'));
+    await tester.pumpAndSettle();
+
+    // Số dư bị che và nút chuyển thành "Hiện"
+    expect(find.text('•••••••• đ'), findsOneWidget);
+    expect(find.text('Hiện'), findsOneWidget);
+
+    // Bấm nút Hiện
+    await tester.tap(find.text('Hiện'));
+    await tester.pumpAndSettle();
+
+    // Số dư hiện lại
+    expect(find.text('1.000.000 đ'), findsOneWidget);
+    expect(find.text('Ẩn'), findsOneWidget);
+  });
+
+  testWidgets('Trang chủ: Nút Nạp tiền cùng hàng với số dư và mở sheet Nạp tiền', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await _login(tester, account: 'admin', password: '123456');
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    final depositBtn = find.text('Nạp tiền');
+    expect(depositBtn, findsOneWidget);
+
+    await tester.tap(depositBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nạp tiền vào ví'), findsOneWidget);
+  });
+
+  testWidgets('Trang chủ: Phần Ưu đãi & Khuyến mãi có 2 phần tử mới tương tác mở Quỹ và Hũ chi tiêu', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await _login(tester, account: 'admin', password: '123456');
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+
+    // Kiểm tra hiển thị phần tử 1: Quỹ tiết kiệm
+    final fundPromo = find.text('Lập quỹ tiết kiệm cho bản thân và gia đình');
+    await tester.ensureVisible(fundPromo);
+    expect(fundPromo, findsOneWidget);
+    expect(find.text('Tạo quỹ cá nhân, cặp đôi, tích luỹ, ...'), findsOneWidget);
+
+    // Kiểm tra hiển thị phần tử 2: Chi tiêu tháng theo thời gian thực và thời gian cập nhật
+    final currentMonth = DateTime.now().month;
+    final spendingPromo = find.text('Chi tiêu tháng $currentMonth');
+    expect(spendingPromo, findsOneWidget);
+    expect(find.textContaining('Cập nhật lúc'), findsOneWidget);
+
+    // Bấm vào phần tử Quỹ -> Mở Quỹ tiết kiệm & Đầu tư sheet
+    await tester.tap(fundPromo);
+    await tester.pumpAndSettle();
+    expect(find.text('Quỹ tiết kiệm & Đầu tư'), findsOneWidget);
+
+    // Đóng sheet
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+
+    // Bấm vào phần tử Chi tiêu tháng -> Mở Hũ chi tiêu sheet
+    await tester.tap(spendingPromo);
+    await tester.pumpAndSettle();
+    expect(find.text('Hũ chi tiêu (6 Jars)'), findsOneWidget);
+  });
 }
 
 /// Đăng nhập từ màn hình đăng nhập với tài khoản cho trước.

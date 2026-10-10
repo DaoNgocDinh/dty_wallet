@@ -12,9 +12,11 @@ class AppSession extends ChangeNotifier {
 
   String? _token;
   AuthUser? _user;
+  DateTime? _loginTime;
 
   String? get token => _token;
   AuthUser? get user => _user;
+  DateTime? get loginTime => _loginTime;
   bool get isLoggedIn => _token != null;
 
   Future<AuthResult> login({
@@ -27,6 +29,7 @@ class AppSession extends ChangeNotifier {
     );
     _token = result.token;
     _user = result.user;
+    _loginTime = DateTime.now();
     notifyListeners();
     return result;
   }
