@@ -70,7 +70,9 @@ class _TestLoginScreenState extends State<TestLoginScreen> {
       if (mounted) {
         setState(() => _error = null);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Token hợp lệ: GET /api/wallet thành công')),
+          const SnackBar(
+            content: Text('Token hợp lệ: GET /api/wallet thành công'),
+          ),
         );
       }
     } on ApiException catch (error) {
@@ -135,7 +137,9 @@ class _TestLoginScreenState extends State<TestLoginScreen> {
                       controller: _accountController,
                       textInputAction: TextInputAction.next,
                       validator: (value) =>
-                          (value == null || value.trim().isEmpty) ? 'Nhập tài khoản' : null,
+                          (value == null || value.trim().isEmpty)
+                          ? 'Nhập tài khoản'
+                          : null,
                     ),
                     const SizedBox(height: 20),
                     AuthTextField(
@@ -144,9 +148,12 @@ class _TestLoginScreenState extends State<TestLoginScreen> {
                       controller: _passwordController,
                       obscureText: true,
                       textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) { _runLoginTest(); },
-                      validator: (value) =>
-                          (value == null || value.isEmpty) ? 'Nhập mật khẩu' : null,
+                      onFieldSubmitted: (_) {
+                        _runLoginTest();
+                      },
+                      validator: (value) => (value == null || value.isEmpty)
+                          ? 'Nhập mật khẩu'
+                          : null,
                     ),
                     const SizedBox(height: 24),
                     AppButton(
@@ -254,9 +261,8 @@ class _TestLoginScreenState extends State<TestLoginScreen> {
 
 /// Mở màn hình test từ màn hình chính (giữ phiên đăng nhập hiện tại).
 void openTestLoginScreen(BuildContext context) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const TestLoginScreen()),
-  );
+  Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => const TestLoginScreen()));
 }
 
 /// Rút gọn token cho dễ đọc.

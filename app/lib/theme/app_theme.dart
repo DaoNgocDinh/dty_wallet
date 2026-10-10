@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+/// Độ dài tối thiểu của mật khẩu, phải khớp với server (MIN_PASSWORD_LENGTH).
+const int kMinPasswordLength = 6;
+
 /// Bảng màu của ứng dụng (xanh dương nhạt làm màu chủ đạt).
 class AppColors {
   AppColors._();

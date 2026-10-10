@@ -10,11 +10,11 @@ class AuthUser {
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
-        id: json['id']?.toString() ?? '',
-        name: json['name'] as String? ?? '',
-        email: json['email'] as String? ?? '',
-        walletBalance: (json['walletBalance'] as num?)?.toDouble() ?? 0,
-      );
+    id: json['id']?.toString() ?? '',
+    name: json['name'] as String? ?? '',
+    email: json['email'] as String? ?? '',
+    walletBalance: (json['walletBalance'] as num?)?.toDouble() ?? 0,
+  );
 
   final String id;
   final String name;
@@ -26,9 +26,9 @@ class AuthResult {
   const AuthResult({required this.token, required this.user});
 
   factory AuthResult.fromJson(Map<String, dynamic> json) => AuthResult(
-        token: json['token'] as String? ?? '',
-        user: AuthUser.fromJson(json['user'] as Map<String, dynamic>? ?? const {}),
-      );
+    token: json['token'] as String? ?? '',
+    user: AuthUser.fromJson(json['user'] as Map<String, dynamic>? ?? const {}),
+  );
 
   final String token;
   final AuthUser user;
@@ -44,10 +44,10 @@ class AuthService {
     required String account,
     required String password,
   }) async {
-    final data = await _client.post('/auth/login', body: {
-      'name': account.trim(),
-      'password': password,
-    });
+    final data = await _client.post(
+      '/auth/login',
+      body: {'name': account.trim(), 'password': password},
+    );
     return AuthResult.fromJson(data);
   }
 
@@ -56,14 +56,38 @@ class AuthService {
     required String account,
     required String password,
   }) async {
-    final data = await _client.post('/auth/register', body: {
-      'name': account.trim(),
-      'password': password,
-    });
+    final data = await _client.post(
+      '/auth/register',
+      body: {'name': account.trim(), 'password': password},
+    );
     return AuthResult.fromJson(data);
   }
 
   /// Gọi một API cần token để kiểm tra token còn hiệu lực hay không.
   Future<Map<String, dynamic>> wallet(String token) =>
       _client.get('/wallet', token: token);
+
+  /// Đăng xuất: server xác nhận token hợp lệ, client tự xoá token đã lưu.
+  Future<void> logout(String token) async {
+    await _client.post('/auth/logout', token: token);
+  }
+
+  /// Đổi mật khẩu. [currentPassword] phải đúng mật khẩu hiện tại và
+  /// [newPassword] phải khớp với [confirmNewPassword].
+  Future<void> changePassword({
+    required String token,
+    required String currentPassword,
+    required String newPassword,
+    required String confirmNewPassword,
+  }) async {
+    await _client.post(
+      '/auth/change-password',
+      token: token,
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+        'confirmNewPassword': confirmNewPassword,
+      },
+    );
+  }
 }

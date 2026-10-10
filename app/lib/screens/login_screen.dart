@@ -62,16 +62,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _goToRegister() {
     FocusScope.of(context).unfocus();
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const RegisterScreen()),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const RegisterScreen()));
   }
 
   void _goToTestScreen() {
     FocusScope.of(context).unfocus();
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const TestLoginScreen()),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const TestLoginScreen()));
   }
 
   @override
@@ -82,7 +80,9 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (context, constraints) => SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - 48,
+              ),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
@@ -145,7 +145,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: _passwordController,
                           obscureText: true,
                           textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) { _handleLogin(); },
+                          onFieldSubmitted: (_) {
+                            _handleLogin();
+                          },
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Vui lòng nhập mật khẩu';

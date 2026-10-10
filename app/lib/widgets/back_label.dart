@@ -24,8 +24,11 @@ class BackLabel extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.arrow_back_rounded,
-                    size: 18, color: AppColors.lightBlue),
+                const Icon(
+                  Icons.arrow_back_rounded,
+                  size: 18,
+                  color: AppColors.lightBlue,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   text,

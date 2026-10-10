@@ -25,6 +25,7 @@ class ApiException implements Exception {
 /// Mã lỗi của server -> thông điệp hiển thị cho người dùng.
 const Map<String, String> _apiErrorMessages = {
   'INVALID_CREDENTIALS': 'Tài khoản hoặc mật khẩu không đúng',
+  'WRONG_PASSWORD': 'Mật khẩu cũ không đúng',
   'INVALID_INPUT': 'Thông tin không hợp lệ',
   'USERNAME_EXISTS': 'Tài khoản đã tồn tại',
   'EMAIL_EXISTS': 'Email đã được sử dụng',
@@ -32,8 +33,8 @@ const Map<String, String> _apiErrorMessages = {
 
 class ApiClient {
   ApiClient({String? baseUrl, http.Client? httpClient})
-      : baseUrl = baseUrl ?? kApiBaseUrl,
-        _http = httpClient ?? http.Client();
+    : baseUrl = baseUrl ?? kApiBaseUrl,
+      _http = httpClient ?? http.Client();
 
   final String baseUrl;
   final http.Client _http;
@@ -49,19 +50,22 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
     String? token,
-  }) =>
-      _send(() => _http.post(
-            _uri(path),
-            headers: _headers(token),
-            body: jsonEncode(body ?? const {}),
-          ));
+  }) => _send(
+    () => _http.post(
+      _uri(path),
+      headers: _headers(token),
+      body: jsonEncode(body ?? const {}),
+    ),
+  );
 
   Map<String, String> _headers(String? token) => {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      };
+    'Content-Type': 'application/json',
+    if (token != null) 'Authorization': 'Bearer $token',
+  };
 
-  Future<Map<String, dynamic>> _send(Future<http.Response> Function() request) async {
+  Future<Map<String, dynamic>> _send(
+    Future<http.Response> Function() request,
+  ) async {
     http.Response response;
     try {
       response = await request().timeout(_timeout);
@@ -81,7 +85,8 @@ class ApiClient {
 
     final code = data['code'] as String?;
     throw ApiException(
-      _apiErrorMessages[code] ?? (data['error'] as String? ?? 'Lỗi ${response.statusCode}'),
+      _apiErrorMessages[code] ??
+          (data['error'] as String? ?? 'Lỗi ${response.statusCode}'),
       code: code,
       statusCode: response.statusCode,
     );

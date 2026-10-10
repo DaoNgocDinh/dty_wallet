@@ -15,6 +15,9 @@ class AppButton extends StatelessWidget {
     this.style = AppButtonStyle.filled,
     this.icon,
     this.isLoading = false,
+    this.width,
+    this.height = 52,
+    this.fontSize = 16,
   });
 
   final String text;
@@ -23,22 +26,28 @@ class AppButton extends StatelessWidget {
   final IconData? icon;
   final bool isLoading;
 
+  /// null: nút chiếm hết chiều ngang. Truyền số để giới hạn bề rộng.
+  final double? width;
+  final double height;
+  final double fontSize;
+
   @override
   Widget build(BuildContext context) {
     final isFilled = style == AppButtonStyle.filled;
     final foreground = isFilled ? Colors.white : AppColors.lightBlue;
 
     return SizedBox(
-      width: double.infinity,
-      height: 52,
+      width: width ?? double.infinity,
+      height: height,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           elevation: 0,
           backgroundColor: isFilled ? AppColors.lightBlue : Colors.white,
           foregroundColor: foreground,
-          disabledBackgroundColor:
-              isFilled ? AppColors.lightBlue.withValues(alpha: 0.5) : Colors.white,
+          disabledBackgroundColor: isFilled
+              ? AppColors.lightBlue.withValues(alpha: 0.5)
+              : Colors.white,
           disabledForegroundColor: foreground.withValues(alpha: 0.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -46,10 +55,7 @@ class AppButton extends StatelessWidget {
                 ? BorderSide.none
                 : const BorderSide(color: AppColors.lightBlue, width: 1.4),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
         ),
         child: isLoading
             ? SizedBox(

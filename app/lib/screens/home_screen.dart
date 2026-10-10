@@ -5,11 +5,12 @@ import '../state/app_session.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_logo.dart';
+import 'change_password_screen.dart';
 import 'login_screen.dart';
 import 'test_login_screen.dart';
 
-/// Màn hình chính, hiển thị sau khi đăng nhập thành công.
-/// TODO: thay nội dung này bằng trang chủ thật của ứng dụng ví.
+/// Trang chủ tạm thời: nút Đổi mật khẩu và Đăng xuất nằm trên cùng bên phải,
+/// mỗi nút rộng bằng 1/5 bề ngang giao diện.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -21,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _walletMessage;
   String? _walletError;
   bool _loadedWallet = false;
+  bool _isLoggingOut = false;
 
   @override
   void didChangeDependencies() {
@@ -44,8 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _logout() {
-    AppScope.of(context).logout();
+  Future<void> _logout() async {
+    setState(() => _isLoggingOut = true);
+    await AppScope.of(context).logout();
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
       (route) => false,
@@ -55,78 +59,100 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = AppScope.of(context).user;
+    // Mỗi nút rộng bằng 1/5 bề ngang giao diện.
+    final buttonWidth = MediaQuery.sizeOf(context).width / 5;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ví điện tử'),
-        actions: [
-          IconButton(
-            tooltip: 'Test đăng nhập',
-            icon: const Icon(Icons.science_outlined),
-            color: AppColors.lightBlue,
-            onPressed: () => openTestLoginScreen(context),
-          ),
-          IconButton(
-            tooltip: 'Đăng xuất',
-            icon: const Icon(Icons.logout_rounded, color: AppColors.lightBlue),
-            onPressed: _logout,
-          ),
-        ],
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const AppLogo(size: 96),
-                const SizedBox(height: 24),
-                Text(
-                  'Xin chào, ${user?.name ?? ''}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    onPressed: () => openTestLoginScreen(context),
+                    icon: const Icon(Icons.science_outlined),
+                    color: AppColors.lightBlue,
+                    tooltip: 'Màn hình test đăng nhập',
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  user?.email ?? '',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                if (_walletMessage != null)
-                  Text(
-                    _walletMessage!,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.lightBlue,
-                    ),
-                  )
-                else if (_walletError != null)
-                  Text(
-                    _walletError!,
-                    style: const TextStyle(
+                  SizedBox(
+                    width: buttonWidth,
+                    child: AppButton(
+                      text: 'Đổi mật khẩu',
+                      style: AppButtonStyle.outline,
+                      height: 40,
                       fontSize: 13,
-                      color: AppColors.error,
+                      onPressed: () => openChangePasswordScreen(context),
                     ),
                   ),
-                const SizedBox(height: 24),
-                AppButton(
-                  text: 'Test tính năng đăng nhập',
-                  style: AppButtonStyle.outline,
-                  icon: Icons.science_outlined,
-                  onPressed: () => openTestLoginScreen(context),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: buttonWidth,
+                    child: AppButton(
+                      text: 'Đăng xuất',
+                      height: 40,
+                      fontSize: 13,
+                      isLoading: _isLoggingOut,
+                      onPressed: _logout,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const AppLogo(size: 96),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Xin chào, ${user?.name ?? ''}',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          user?.email ?? '',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        if (_walletMessage != null)
+                          Text(
+                            _walletMessage!,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.lightBlue,
+                            ),
+                          )
+                        else if (_walletError != null)
+                          Text(
+                            _walletError!,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.error,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

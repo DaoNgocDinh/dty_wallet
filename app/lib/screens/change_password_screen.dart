@@ -9,32 +9,32 @@ import '../widgets/auth_text_field.dart';
 import '../widgets/back_label.dart';
 import '../widgets/error_message.dart';
 
-/// Màn hình đăng ký: Tài khoản + Mật khẩu + Xác thực mật khẩu.
-/// Nhãn "Trở về" nằm trên cùng bên trái để quay lại màn hình đăng nhập.
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+/// Màn hình đổi mật khẩu: Mật khẩu cũ + Mật khẩu mới + Xác thực mật khẩu.
+/// Gọi API POST /api/auth/change-password của server.
+class ChangePasswordScreen extends StatefulWidget {
+  const ChangePasswordScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _accountController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   String? _error;
 
   @override
   void dispose() {
-    _accountController.dispose();
-    _passwordController.dispose();
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleRegister() async {
+  Future<void> _handleChangePassword() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     setState(() {
@@ -43,17 +43,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      await AppScope.of(context).register(
-        account: _accountController.text,
-        password: _passwordController.text,
+      await AppScope.of(context).changePassword(
+        currentPassword: _currentPasswordController.text,
+        newPassword: _newPasswordController.text,
+        confirmNewPassword: _confirmPasswordController.text,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Đăng ký thành công tài khoản "${_accountController.text.trim()}"',
-          ),
-        ),
+        const SnackBar(content: Text('Đổi mật khẩu thành công')),
       );
       Navigator.of(context).pop();
     } on ApiException catch (error) {
@@ -77,9 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           builder: (context, constraints) => SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight - 48,
-              ),
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
@@ -94,7 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const Center(child: AppLogo(size: 112)),
                         const SizedBox(height: 24),
                         const Text(
-                          'Đăng ký',
+                          'Đổi mật khẩu',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 26,
@@ -104,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          'Tạo tài khoản mới để sử dụng ví điện tử',
+                          'Nhập mật khẩu cũ và mật khẩu mới của bạn',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
@@ -113,33 +108,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         const SizedBox(height: 32),
                         AuthTextField(
-                          label: 'Tài khoản',
-                          hintText: 'Nhập tài khoản của bạn',
-                          icon: Icons.person_outline_rounded,
-                          controller: _accountController,
-                          keyboardType: TextInputType.text,
+                          label: 'Mật khẩu cũ',
+                          hintText: 'Nhập mật khẩu hiện tại',
+                          icon: Icons.lock_outline_rounded,
+                          controller: _currentPasswordController,
+                          obscureText: true,
                           textInputAction: TextInputAction.next,
                           validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Vui lòng nhập tài khoản';
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng nhập mật khẩu cũ';
                             }
                             return null;
                           },
                         ),
                         const SizedBox(height: 20),
                         AuthTextField(
-                          label: 'Mật khẩu',
+                          label: 'Mật khẩu mới',
                           hintText: 'Tối thiểu $kMinPasswordLength ký tự',
-                          icon: Icons.lock_outline_rounded,
-                          controller: _passwordController,
+                          icon: Icons.lock_reset_rounded,
+                          controller: _newPasswordController,
                           obscureText: true,
                           textInputAction: TextInputAction.next,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Vui lòng nhập mật khẩu';
+                              return 'Vui lòng nhập mật khẩu mới';
                             }
                             if (value.length < kMinPasswordLength) {
-                              return 'Mật khẩu tối thiểu $kMinPasswordLength ký tự';
+                              return 'Mật khẩu mới tối thiểu $kMinPasswordLength ký tự';
+                            }
+                            if (value == _currentPasswordController.text) {
+                              return 'Mật khẩu mới phải khác mật khẩu cũ';
                             }
                             return null;
                           },
@@ -147,20 +145,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 20),
                         AuthTextField(
                           label: 'Xác thực mật khẩu',
-                          hintText: 'Nhập lại mật khẩu',
-                          icon: Icons.lock_reset_rounded,
+                          hintText: 'Nhập lại mật khẩu mới',
+                          icon: Icons.verified_user_outlined,
                           controller: _confirmPasswordController,
                           obscureText: true,
                           textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) {
-                            _handleRegister();
-                          },
+                          onFieldSubmitted: (_) { _handleChangePassword(); },
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Vui lòng xác thực mật khẩu';
+                              return 'Vui lòng xác thực mật khẩu mới';
                             }
-                            if (value != _passwordController.text) {
-                              return 'Mật khẩu xác thực không khớp';
+                            if (value != _newPasswordController.text) {
+                              return 'Xác thực mật khẩu không khớp';
                             }
                             return null;
                           },
@@ -171,9 +167,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ],
                         const SizedBox(height: 28),
                         AppButton(
-                          text: 'Xác nhận đăng ký',
+                          text: 'Xác nhận đổi mật khẩu',
                           isLoading: _isLoading,
-                          onPressed: _handleRegister,
+                          onPressed: _handleChangePassword,
                         ),
                       ],
                     ),
@@ -186,4 +182,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+}
+
+/// Mở màn hình đổi mật khẩu từ trang chủ.
+void openChangePasswordScreen(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(builder: (_) => const ChangePasswordScreen()),
+  );
 }

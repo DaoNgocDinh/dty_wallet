@@ -21,7 +21,11 @@ class ErrorMessage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.error,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
