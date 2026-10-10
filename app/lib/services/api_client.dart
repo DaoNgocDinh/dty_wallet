@@ -29,6 +29,7 @@ const Map<String, String> _apiErrorMessages = {
   'INVALID_INPUT': 'Thông tin không hợp lệ',
   'USERNAME_EXISTS': 'Tài khoản đã tồn tại',
   'EMAIL_EXISTS': 'Email đã được sử dụng',
+  'NAME_TOO_LONG': 'Tên tài khoản quá dài',
 };
 
 class ApiClient {
@@ -77,9 +78,7 @@ class ApiClient {
       );
     }
 
-    final Map<String, dynamic> data = response.body.isEmpty
-        ? const {}
-        : jsonDecode(response.body) as Map<String, dynamic>;
+    final Map<String, dynamic> data = _decode(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) return data;
 
@@ -88,6 +87,21 @@ class ApiClient {
       _apiErrorMessages[code] ??
           (data['error'] as String? ?? 'Lỗi ${response.statusCode}'),
       code: code,
+      statusCode: response.statusCode,
+    );
+  }
+
+  /// Đọc body JSON; body rỗng hoặc không phải JSON object thì quy về lỗi dễ hiểu.
+  Map<String, dynamic> _decode(http.Response response) {
+    if (response.body.isEmpty) return const {};
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } on FormatException {
+      // Rơi xuống throw bên dưới.
+    }
+    throw ApiException(
+      'Máy chủ trả về dữ liệu không hợp lệ (mã ${response.statusCode})',
       statusCode: response.statusCode,
     );
   }

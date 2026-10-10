@@ -42,23 +42,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _error = null;
     });
 
+    final account = _accountController.text.trim();
     try {
       await AppScope.of(context).register(
-        account: _accountController.text,
+        account: account,
         password: _passwordController.text,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Đăng ký thành công tài khoản "${_accountController.text.trim()}"',
+            'Đăng ký thành công tài khoản "$account". Vui lòng đăng nhập.',
           ),
         ),
       );
-      Navigator.of(context).pop();
+      // Trả tên tài khoản về màn hình đăng nhập để điền sẵn.
+      Navigator.of(context).pop(account);
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _error = error.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Đã có lỗi xảy ra, vui lòng thử lại');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -122,6 +127,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'Vui lòng nhập tài khoản';
+                            }
+                            if (value.trim().length > kMaxAccountLength) {
+                              return 'Tài khoản tối đa $kMaxAccountLength ký tự';
                             }
                             return null;
                           },

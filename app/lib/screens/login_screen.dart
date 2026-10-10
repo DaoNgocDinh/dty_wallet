@@ -60,10 +60,18 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _goToRegister() {
+  Future<void> _goToRegister() async {
     FocusScope.of(context).unfocus();
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const RegisterScreen()));
+    final account = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(builder: (_) => const RegisterScreen()),
+    );
+    if (!mounted || account == null) return;
+    // Đăng ký thành công: điền sẵn tài khoản vừa tạo, chỉ cần nhập mật khẩu.
+    setState(() {
+      _accountController.text = account;
+      _passwordController.clear();
+      _error = null;
+    });
   }
 
   void _goToTestScreen() {

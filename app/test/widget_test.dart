@@ -163,6 +163,32 @@ void main() {
     expect(find.byType(RegisterScreen), findsNothing);
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.textContaining('Đăng ký thành công'), findsOneWidget);
+
+    // Tài khoản vừa tạo được điền sẵn, mật khẩu để trống, chưa tự đăng nhập.
+    final accountField =
+        tester.widget<TextFormField>(find.byType(TextFormField).at(0));
+    final passwordField =
+        tester.widget<TextFormField>(find.byType(TextFormField).at(1));
+    expect(accountField.controller!.text, 'nguyenvana');
+    expect(passwordField.controller!.text, isEmpty);
+    final session = AppScope.of(tester.element(find.byType(LoginScreen)));
+    expect(session.isLoggedIn, isFalse);
+  });
+
+  testWidgets('Đăng ký: tài khoản quá dài bị chặn ở client', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tapButton(tester, 'Đăng ký');
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.byType(TextFormField).at(0), 'a' * (kMaxAccountLength + 1));
+    await tester.enterText(find.byType(TextFormField).at(1), '123456');
+    await tester.enterText(find.byType(TextFormField).at(2), '123456');
+    await tapButton(tester, 'Xác nhận đăng ký');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RegisterScreen), findsOneWidget);
+    expect(find.text('Tài khoản tối đa $kMaxAccountLength ký tự'), findsOneWidget);
   });
 
   testWidgets('Tài khoản đã tồn tại sẽ hiện lỗi từ server', (tester) async {

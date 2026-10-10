@@ -31,18 +31,13 @@ class AppSession extends ChangeNotifier {
     return result;
   }
 
+  /// Đăng ký tài khoản mới. Không tự lưu phiên: sau khi đăng ký app quay về
+  /// màn hình đăng nhập để người dùng đăng nhập bằng tài khoản vừa tạo.
   Future<AuthResult> register({
     required String account,
     required String password,
-  }) async {
-    final result = await _authService.register(
-      account: account,
-      password: password,
-    );
-    _token = result.token;
-    _user = result.user;
-    notifyListeners();
-    return result;
+  }) {
+    return _authService.register(account: account, password: password);
   }
 
   Future<Map<String, dynamic>> fetchWallet() {
