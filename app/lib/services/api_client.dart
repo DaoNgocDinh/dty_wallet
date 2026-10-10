@@ -59,6 +59,18 @@ class ApiClient {
     ),
   );
 
+  Future<Map<String, dynamic>> put(
+    String path, {
+    Map<String, dynamic>? body,
+    String? token,
+  }) => _send(
+    () => _http.put(
+      _uri(path),
+      headers: _headers(token),
+      body: jsonEncode(body ?? const {}),
+    ),
+  );
+
   Map<String, String> _headers(String? token) => {
     'Content-Type': 'application/json',
     if (token != null) 'Authorization': 'Bearer $token',

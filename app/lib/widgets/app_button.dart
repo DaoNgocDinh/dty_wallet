@@ -18,6 +18,7 @@ class AppButton extends StatelessWidget {
     this.width,
     this.height = 52,
     this.fontSize = 16,
+    this.padding,
   });
 
   final String text;
@@ -30,6 +31,7 @@ class AppButton extends StatelessWidget {
   final double? width;
   final double height;
   final double fontSize;
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +47,7 @@ class AppButton extends StatelessWidget {
           elevation: 0,
           backgroundColor: isFilled ? AppColors.lightBlue : Colors.white,
           foregroundColor: foreground,
+          padding: padding ?? (width != null ? const EdgeInsets.symmetric(horizontal: 6) : null),
           disabledBackgroundColor: isFilled
               ? AppColors.lightBlue.withValues(alpha: 0.5)
               : Colors.white,
@@ -59,8 +62,8 @@ class AppButton extends StatelessWidget {
         ),
         child: isLoading
             ? SizedBox(
-                width: 22,
-                height: 22,
+                width: 20,
+                height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.2,
                   color: foreground,
@@ -71,15 +74,21 @@ class AppButton extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 20, color: foreground),
-                    const SizedBox(width: 8),
+                    Icon(icon, size: 18, color: foreground),
+                    const SizedBox(width: 6),
                   ],
                   Flexible(
-                    child: Text(
-                      text,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: foreground),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        text,
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: foreground,
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ],

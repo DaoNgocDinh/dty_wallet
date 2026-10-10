@@ -4,8 +4,8 @@ import 'package:app/main.dart';
 import 'package:app/screens/change_password_screen.dart';
 import 'package:app/screens/home_screen.dart';
 import 'package:app/screens/login_screen.dart';
+import 'package:app/screens/profile_screen.dart';
 import 'package:app/screens/register_screen.dart';
-import 'package:app/screens/test_login_screen.dart';
 import 'package:app/services/api_client.dart';
 import 'package:app/services/auth_service.dart';
 import 'package:app/state/app_session.dart';
@@ -68,6 +68,70 @@ class FakeAuthService implements AuthService {
     }
     this.currentPassword = newPassword;
   }
+
+  @override
+  Future<void> setPin({
+    required String token,
+    required String password,
+    required String pin,
+  }) async {}
+
+  @override
+  Future<Map<String, dynamic>> profile(String token) async => {
+        'user': {
+          'id': '65f0000000000000000000aa',
+          'name': 'admin',
+          'email': 'admin@gmail.com',
+          'walletBalance': 1000000,
+          'hasPin': false,
+        }
+      };
+
+  @override
+  Future<Map<String, dynamic>> transactions(String token) async => {'data': []};
+
+  @override
+  Future<Map<String, dynamic>> funds(String token) async => {'data': []};
+
+  @override
+  Future<Map<String, dynamic>> createFund({
+    required String token,
+    required String name,
+    required String fundType,
+    required double targetAmount,
+  }) async => {};
+
+  @override
+  Future<Map<String, dynamic>> spendingJars(String token) async => {'data': []};
+
+  @override
+  Future<Map<String, dynamic>> deposit({
+    required String token,
+    required double amount,
+    required String source,
+    required String paymentMethod,
+  }) async => {'message': 'Deposit success'};
+
+  @override
+  Future<Map<String, dynamic>> mobileTopup({
+    required String token,
+    required String carrier,
+    required String phoneNumber,
+    required double amount,
+    required String pin,
+    String? dataPackage,
+  }) async => {'message': 'Topup success'};
+
+  @override
+  Future<Map<String, dynamic>> payBill({
+    required String token,
+    required String billType,
+    required String customerCode,
+    required double amount,
+    required String paymentMethod,
+    required String pin,
+    String? content,
+  }) async => {'message': 'Bill paid'};
 
   AuthResult _result(String account) => AuthResult(
         token: 'fake-jwt-token-for-$account',
@@ -206,94 +270,56 @@ void main() {
     expect(find.text('Tài khoản đã tồn tại'), findsOneWidget);
   });
 
-  testWidgets('Màn hình test đăng nhập gọi API và hiện kết quả', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light,
-        home: TestLoginScreen(
-          authService: FakeAuthService(acceptedPassword: '123456'),
-        ),
-      ),
-    );
-
-    expect(find.byType(TestLoginScreen), findsOneWidget);
-    // Tài khoản/mật khẩu được điền sẵn (admin / 123456) để test nhanh.
-    expect(find.widgetWithText(AppButton, 'Test đăng nhập'), findsOneWidget);
-
-    await tapButton(tester, 'Test đăng nhập');
-    await tester.pumpAndSettle();
-
-    expect(find.text('KẾT QUẢ: THÀNH CÔNG'), findsOneWidget);
-    expect(find.text('admin@gmail.com'), findsOneWidget);
-
-    // Token nhận được dùng để gọi API cần xác thực.
-    await tapButton(tester, 'Kiểm tra token (GET /api/wallet)');
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Token hợp lệ'), findsOneWidget);
-  });
-
-  testWidgets('Test đăng nhập sai mật khẩu sẽ hiện lỗi', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light,
-        home: TestLoginScreen(
-          authService: FakeAuthService(acceptedPassword: 'mat-khau-khac'),
-        ),
-      ),
-    );
-
-    await tapButton(tester, 'Test đăng nhập');
-    await tester.pumpAndSettle();
-
-    expect(find.text('KẾT QUẢ: THẤT BẠI'), findsOneWidget);
-    expect(find.text('Tài khoản hoặc mật khẩu không đúng'), findsOneWidget);
-  });
-
-  testWidgets('Mở được màn hình test từ màn hình đăng nhập', (tester) async {
-    await tester.pumpWidget(buildApp());
-
-    await tester.tap(find.byTooltip('Màn hình test đăng nhập'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(TestLoginScreen), findsOneWidget);
-  });
-
-  testWidgets('Trang chủ có 2 nút, mỗi nút rộng 1/5 giao diện', (tester) async {
+  testWidgets('Trang chủ có nút Trang cá nhân hình vuông tròn ở góc trên bên phải', (tester) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
 
     expect(find.byType(HomeScreen), findsOneWidget);
 
-    final logout = find.widgetWithText(AppButton, 'Đăng xuất');
-    final change = find.widgetWithText(AppButton, 'Đổi mật khẩu');
-    expect(logout, findsOneWidget);
-    expect(change, findsOneWidget);
+    final profileBtn = find.byTooltip('Trang cá nhân');
+    expect(profileBtn, findsOneWidget);
 
-    // Cùng kích thước, cạnh nhau ở góc trên bên phải.
     final screenWidth = tester.getSize(find.byType(HomeScreen)).width;
-    expect(tester.getSize(logout).width, closeTo(screenWidth / 5, 0.5));
-    expect(tester.getSize(change).width, tester.getSize(logout).width);
-    expect(tester.getSize(change).height, tester.getSize(logout).height);
-    expect(tester.getTopRight(logout).dx, greaterThan(tester.getTopLeft(change).dx));
-    expect(tester.getTopRight(logout).dx, closeTo(screenWidth - 16, 0.5));
+    expect(tester.getTopRight(profileBtn).dx, closeTo(screenWidth - 18, 1.5));
   });
 
-  testWidgets('Đăng xuất quay về màn hình đăng nhập', (tester) async {
+  testWidgets('Đăng xuất từ Trang cá nhân quay về màn hình đăng nhập', (tester) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
 
-    await tapButton(tester, 'Đăng xuất');
+    // Mở Trang cá nhân từ góc trên bên phải
+    await tester.tap(find.byTooltip('Trang cá nhân'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileScreen), findsOneWidget);
+
+    // Cuộn tới nút Đăng xuất tài khoản và bấm
+    final logoutBtn = find.widgetWithText(AppButton, 'Đăng xuất tài khoản');
+    await tester.ensureVisible(logoutBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(logoutBtn);
+    await tester.pumpAndSettle();
+
+    // Xác nhận trên AlertDialog
+    final confirmBtn = find.widgetWithText(TextButton, 'Đăng xuất');
+    await tester.tap(confirmBtn);
     await tester.pumpAndSettle();
 
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.byType(HomeScreen), findsNothing);
   });
 
-  testWidgets('Mở màn hình đổi mật khẩu từ trang chủ', (tester) async {
+  testWidgets('Mở màn hình đổi mật khẩu từ Trang cá nhân', (tester) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
 
-    await tapButton(tester, 'Đổi mật khẩu');
+    // Mở Trang cá nhân -> Đổi mật khẩu
+    await tester.tap(find.byTooltip('Trang cá nhân'));
+    await tester.pumpAndSettle();
+
+    final changePwdMenu = find.text('Đổi mật khẩu');
+    await tester.ensureVisible(changePwdMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(changePwdMenu);
     await tester.pumpAndSettle();
 
     expect(find.byType(ChangePasswordScreen), findsOneWidget);
@@ -301,19 +327,25 @@ void main() {
     expect(find.text('Mật khẩu mới'), findsOneWidget);
     expect(find.text('Xác thực mật khẩu'), findsOneWidget);
 
-    // Nhãn trở lại đưa về trang chủ.
+    // Nhãn trở lại đưa về Trang cá nhân
     await tester.tap(find.text('Trở về'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.byType(ChangePasswordScreen), findsNothing);
+    expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
   testWidgets('Đổi mật khẩu: sai mật khẩu cũ sẽ hiện lỗi của server',
       (tester) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
-    await tapButton(tester, 'Đổi mật khẩu');
+
+    await tester.tap(find.byTooltip('Trang cá nhân'));
+    await tester.pumpAndSettle();
+    final changePwdMenu = find.text('Đổi mật khẩu');
+    await tester.ensureVisible(changePwdMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(changePwdMenu);
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).at(0), 'khong-dung');
@@ -330,7 +362,13 @@ void main() {
       (tester) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
-    await tapButton(tester, 'Đổi mật khẩu');
+
+    await tester.tap(find.byTooltip('Trang cá nhân'));
+    await tester.pumpAndSettle();
+    final changePwdMenu = find.text('Đổi mật khẩu');
+    await tester.ensureVisible(changePwdMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(changePwdMenu);
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).at(0), 'mat-khau-cu');
@@ -342,10 +380,16 @@ void main() {
     expect(find.text('Xác thực mật khẩu không khớp'), findsOneWidget);
   });
 
-  testWidgets('Đổi mật khẩu thành công sẽ quay về trang chủ', (tester) async {
+  testWidgets('Đổi mật khẩu thành công sẽ quay về trang cá nhân', (tester) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
-    await tapButton(tester, 'Đổi mật khẩu');
+
+    await tester.tap(find.byTooltip('Trang cá nhân'));
+    await tester.pumpAndSettle();
+    final changePwdMenu = find.text('Đổi mật khẩu');
+    await tester.ensureVisible(changePwdMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(changePwdMenu);
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).at(0), 'mat-khau-cu');
@@ -355,8 +399,69 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ChangePasswordScreen), findsNothing);
-    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(ProfileScreen), findsOneWidget);
     expect(find.textContaining('Đổi mật khẩu thành công'), findsOneWidget);
+  });
+
+  testWidgets('Giao diện hiển thị chuẩn xác trên kích thước màn hình iPhone 18',
+      (tester) async {
+    tester.view.physicalSize = const Size(kIPhone18Width, kIPhone18Height);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(buildApp());
+    expect(find.byType(LoginScreen), findsOneWidget);
+
+    await _login(tester, account: 'admin', password: '123456');
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.text('Ví điện tử DTY'), findsOneWidget);
+    expect(find.text('1.000.000 đ'), findsOneWidget);
+
+    // Kiểm tra nút Trang cá nhân ở góc trên bên phải
+    final profileBtn = find.byTooltip('Trang cá nhân');
+    expect(profileBtn, findsOneWidget);
+  });
+
+  testWidgets('Trang chủ: có đủ 6 nút tính năng và bấm nút Trang cá nhân mở ProfileScreen',
+      (tester) async {
+    await tester.pumpWidget(buildApp());
+    await _login(tester, account: 'admin', password: '123456');
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+
+    // Kiểm tra đủ 6 tính năng (không có dấu + ở đầu)
+    expect(find.text('Nạp ví'), findsOneWidget);
+    expect(find.text('Nạp đt/data'), findsOneWidget);
+    expect(find.text('L.sử giao dịch'), findsOneWidget);
+    expect(find.text('Thanh toán hđ'), findsOneWidget);
+    expect(find.text('Quỹ'), findsOneWidget);
+    expect(find.text('Hũ chi tiêu'), findsOneWidget);
+
+    // Bấm nút Trang cá nhân trên cùng bên phải
+    final profileBtn = find.byTooltip('Trang cá nhân');
+    expect(profileBtn, findsOneWidget);
+    await tester.tap(profileBtn);
+    await tester.pumpAndSettle();
+
+    // Xác nhận đã vào màn hình ProfileScreen
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(find.text('Trang chủ'), findsOneWidget); // Nút BackLabel
+    expect(find.text('Mã PIN giao dịch'), findsOneWidget);
+    expect(find.text('Đổi mật khẩu'), findsOneWidget);
+    expect(find.widgetWithText(AppButton, 'Đăng xuất tài khoản'), findsOneWidget);
+
+    // Bấm quay lại Trang chủ
+    await tester.tap(find.text('Trang chủ'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  test('Định dạng tiền tệ formatVnd: 0 thành 0 đ và 1000000 thành 1.000.000 đ', () {
+    expect(formatVnd(0), '0 đ');
+    expect(formatVnd(1000000), '1.000.000 đ');
+    expect(formatVnd(50000), '50.000 đ');
+    expect(formatVnd(null), '0 đ');
   });
 }
 

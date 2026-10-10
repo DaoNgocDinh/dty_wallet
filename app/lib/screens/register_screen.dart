@@ -87,7 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
+                  constraints: const BoxConstraints(maxWidth: kIPhone18Width),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -95,9 +95,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         BackLabel(onTap: _goBack),
-                        const SizedBox(height: 20),
-                        const Center(child: AppLogo(size: 112)),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 12),
+                        const Center(child: AppLogo(size: 96)),
+                        const SizedBox(height: 18),
                         const Text(
                           'Đăng ký',
                           textAlign: TextAlign.center,

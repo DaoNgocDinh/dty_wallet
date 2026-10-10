@@ -81,7 +81,118 @@ class AppSession extends ChangeNotifier {
     );
   }
 
+  /// Cập nhật mã PIN giao dịch.
+  Future<void> setPin({
+    required String password,
+    required String pin,
+  }) async {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    await _authService.setPin(token: token, password: password, pin: pin);
+    if (_user != null) {
+      _user = AuthUser(
+        id: _user!.id,
+        name: _user!.name,
+        email: _user!.email,
+        walletBalance: _user!.walletBalance,
+        createdAt: _user!.createdAt,
+        hasPin: true,
+      );
+      notifyListeners();
+    }
   }
+
+  /// Lấy thông tin cá nhân chi tiết.
+  Future<Map<String, dynamic>> fetchProfile() async {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    final res = await _authService.profile(token);
+    if (res['user'] is Map<String, dynamic>) {
+      _user = AuthUser.fromJson(res['user'] as Map<String, dynamic>);
+      notifyListeners();
+    }
+    return res;
+  }
+
+  /// Lấy danh sách lịch sử giao dịch.
+  Future<Map<String, dynamic>> fetchTransactions() {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.transactions(token);
+  }
+
+  /// Lấy danh sách quỹ.
+  Future<Map<String, dynamic>> fetchFunds() {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.funds(token);
+  }
+
+  /// Lấy danh sách hũ chi tiêu.
+  Future<Map<String, dynamic>> fetchSpendingJars() {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.spendingJars(token);
+  }
+
+  /// Nạp tiền vào ví.
+  Future<Map<String, dynamic>> deposit({
+    required double amount,
+    required String source,
+    required String paymentMethod,
+  }) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.deposit(
+      token: token,
+      amount: amount,
+      source: source,
+      paymentMethod: paymentMethod,
+    );
+  }
+
+  /// Nạp điện thoại / Data.
+  Future<Map<String, dynamic>> mobileTopup({
+    required String carrier,
+    required String phoneNumber,
+    required double amount,
+    required String pin,
+    String? dataPackage,
+  }) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.mobileTopup(
+      token: token,
+      carrier: carrier,
+      phoneNumber: phoneNumber,
+      amount: amount,
+      pin: pin,
+      dataPackage: dataPackage,
+    );
+  }
+
+  /// Thanh toán hoá đơn.
+  Future<Map<String, dynamic>> payBill({
+    required String billType,
+    required String customerCode,
+    required double amount,
+    required String paymentMethod,
+    required String pin,
+    String? content,
+  }) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.payBill(
+      token: token,
+      billType: billType,
+      customerCode: customerCode,
+      amount: amount,
+      paymentMethod: paymentMethod,
+      pin: pin,
+      content: content,
+    );
+  }
+}
 
 /// Cung cấp [AppSession] cho toàn cây widget.
 class AppScope extends InheritedNotifier<AppSession> {

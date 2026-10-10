@@ -9,7 +9,6 @@ import '../widgets/auth_text_field.dart';
 import '../widgets/error_message.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
-import 'test_login_screen.dart';
 
 /// Màn hình đăng nhập: Tài khoản + Mật khẩu.
 /// Nút "Đăng nhập" để vào app, nút "Đăng ký" chuyển sang màn hình đăng ký.
@@ -74,12 +73,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  void _goToTestScreen() {
-    FocusScope.of(context).unfocus();
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const TestLoginScreen()));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -93,25 +86,15 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
+                  constraints: const BoxConstraints(maxWidth: kIPhone18Width),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: IconButton(
-                            onPressed: _goToTestScreen,
-                            icon: const Icon(Icons.science_outlined),
-                            color: AppColors.lightBlue,
-                            tooltip: 'Màn hình test đăng nhập',
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Center(child: AppLogo(size: 112)),
-                        const SizedBox(height: 24),
+                        const Center(child: AppLogo(size: 104)),
+                        const SizedBox(height: 20),
                         const Text(
                           'Đăng nhập',
                           textAlign: TextAlign.center,

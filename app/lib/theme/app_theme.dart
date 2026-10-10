@@ -6,6 +6,13 @@ const int kMinPasswordLength = 6;
 /// Độ dài tối đa của tên tài khoản, phải khớp với server (maxNameLength).
 const int kMaxAccountLength = 100;
 
+/// Kích thước chuẩn màn hình iPhone 18 (màn hình 6.3 inch):
+/// - Chiều rộng logic: 402 pt
+/// - Chiều cao logic: 874 pt
+/// - Tỉ lệ khung hình: ~19.5:9
+const double kIPhone18Width = 402.0;
+const double kIPhone18Height = 874.0;
+
 /// Bảng màu của ứng dụng (xanh dương nhạt làm màu chủ đạt).
 class AppColors {
   AppColors._();
