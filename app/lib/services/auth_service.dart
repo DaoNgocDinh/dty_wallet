@@ -158,6 +158,13 @@ class AuthService {
   }) =>
       _fundService.deleteFund(token: token, fundId: fundId);
 
+  /// Rời quỹ theo ID (Ủy quyền qua FundService).
+  Future<Map<String, dynamic>> leaveFund({
+    required String token,
+    required String fundId,
+  }) =>
+      _fundService.leaveFund(token: token, fundId: fundId);
+
   /// Lấy thông tin chi tiết một quỹ (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> fundDetails({
     required String token,

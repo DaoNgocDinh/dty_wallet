@@ -87,77 +87,6 @@ class _FundsScreenState extends State<FundsScreen> {
     _loadFunds();
   }
 
-  Future<void> _confirmDeleteFund(Map<String, dynamic> fund) async {
-    final fundId = fund['_id']?.toString() ?? fund['id']?.toString() ?? '';
-    final fundName = fund['name']?.toString() ?? 'quỹ này';
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
-            SizedBox(width: 8),
-            Text(
-              'Xác nhận xoá quỹ',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: Text(
-          'Bạn có chắc chắn muốn xoá quỹ "$fundName" không? Hành động này không thể hoàn tác.',
-          style: const TextStyle(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Huỷ', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () => Navigator.of(dialogCtx).pop(true),
-            child: const Text('Xoá quỹ'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      final messenger = ScaffoldMessenger.of(context);
-      try {
-        await AppScope.of(context).deleteFund(fundId);
-        if (!mounted) return;
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Xoá quỹ "$fundName" thành công'),
-            backgroundColor: const Color(0xFF2E7D32),
-          ),
-        );
-        _loadFunds();
-      } on ApiException catch (e) {
-        if (!mounted) return;
-        messenger.showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: AppColors.error),
-        );
-      } catch (_) {
-        if (!mounted) return;
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Không thể xoá quỹ, vui lòng thử lại'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -406,29 +335,11 @@ class _FundsScreenState extends State<FundsScreen> {
                         ),
                       ),
 
-                      // NÚT XOÁ QUỸ
-                      Semantics(
-                        button: true,
-                        label: 'Xoá quỹ $name',
-                        child: Tooltip(
-                          message: 'Xoá quỹ',
-                          child: InkWell(
-                            onTap: () => _confirmDeleteFund(item),
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.delete_outline_rounded,
-                                color: Colors.red,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ),
+                      // Mũi tên điều hướng xem chi tiết quỹ
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.textSecondary,
+                        size: 22,
                       ),
                     ],
                   ),

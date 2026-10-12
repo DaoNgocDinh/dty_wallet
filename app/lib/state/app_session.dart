@@ -176,6 +176,13 @@ class AppSession extends ChangeNotifier {
     return _authService.deleteFund(token: token, fundId: fundId);
   }
 
+  /// Rời quỹ theo ID (dành cho thành viên quỹ).
+  Future<Map<String, dynamic>> leaveFund(String fundId) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.leaveFund(token: token, fundId: fundId);
+  }
+
   /// Lấy thông tin chi tiết một quỹ.
   Future<Map<String, dynamic>> fetchFundDetails(String fundId) {
     final token = _token;

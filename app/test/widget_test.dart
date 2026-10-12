@@ -39,8 +39,11 @@ class FakeAuthService implements AuthService {
     required String password,
   }) async {
     if (password != acceptedPassword) {
-      throw ApiException('Tài khoản hoặc mật khẩu không đúng',
-          code: 'INVALID_CREDENTIALS', statusCode: 401);
+      throw ApiException(
+        'Tài khoản hoặc mật khẩu không đúng',
+        code: 'INVALID_CREDENTIALS',
+        statusCode: 401,
+      );
     }
     return _result(account);
   }
@@ -51,8 +54,11 @@ class FakeAuthService implements AuthService {
     required String password,
   }) async {
     if (account.toLowerCase() == 'admin') {
-      throw ApiException('Tài khoản đã tồn tại',
-          code: 'USERNAME_EXISTS', statusCode: 409);
+      throw ApiException(
+        'Tài khoản đã tồn tại',
+        code: 'USERNAME_EXISTS',
+        statusCode: 409,
+      );
     }
     return _result(account);
   }
@@ -64,10 +70,10 @@ class FakeAuthService implements AuthService {
 
   @override
   Future<Map<String, dynamic>> wallet(String token) async => {
-        'balance': mockWalletBalance,
-        'walletBalance': mockWalletBalance,
-        'role': token.toLowerCase().contains('admin') ? 'admin' : 'user',
-      };
+    'balance': mockWalletBalance,
+    'walletBalance': mockWalletBalance,
+    'role': token.toLowerCase().contains('admin') ? 'admin' : 'user',
+  };
 
   @override
   Future<void> logout(String token) async {}
@@ -80,8 +86,11 @@ class FakeAuthService implements AuthService {
     required String confirmNewPassword,
   }) async {
     if (currentPassword != this.currentPassword) {
-      throw ApiException('Mật khẩu cũ không đúng',
-          code: 'WRONG_PASSWORD', statusCode: 400);
+      throw ApiException(
+        'Mật khẩu cũ không đúng',
+        code: 'WRONG_PASSWORD',
+        statusCode: 400,
+      );
     }
     if (newPassword != confirmNewPassword) {
       throw ApiException('Xác thực mật khẩu không khớp', code: 'INVALID_INPUT');
@@ -107,7 +116,7 @@ class FakeAuthService implements AuthService {
         'walletBalance': mockWalletBalance,
         'hasPin': false,
         'role': isAdmin ? 'admin' : 'user',
-      }
+      },
     };
   }
 
@@ -151,6 +160,24 @@ class FakeAuthService implements AuthService {
   }
 
   @override
+  Future<Map<String, dynamic>> leaveFund({
+    required String token,
+    required String fundId,
+  }) async {
+    final fund = mockFunds.firstWhere(
+      (item) => (item['id'] ?? item['_id']) == fundId,
+      orElse: () => <String, dynamic>{},
+    );
+    if (fund.isNotEmpty && fund['members'] is List) {
+      (fund['members'] as List).removeWhere((m) {
+        final uid = (m['userId'] is Map) ? (m['userId']['_id'] ?? m['userId']['id']) : m['userId'];
+        return uid == '65f0000000000000000000aa';
+      });
+    }
+    return {'message': 'Rời quỹ thành công', 'fundId': fundId};
+  }
+
+  @override
   Future<Map<String, dynamic>> fundDetails({
     required String token,
     required String fundId,
@@ -179,29 +206,40 @@ class FakeAuthService implements AuthService {
     String? note,
   }) async {
     if (shouldNetworkFailContribute) {
-      throw ApiException(
-        'Không thể thực hiện giao dịch. Vui lòng thử lại sau',
-      );
+      throw ApiException('Không thể thực hiện giao dịch. Vui lòng thử lại sau');
     }
     if (shouldFailContribute) {
-      throw ApiException('Góp quỹ không thành công',
-          code: 'CONTRIBUTION_FAILED', statusCode: 500);
+      throw ApiException(
+        'Góp quỹ không thành công',
+        code: 'CONTRIBUTION_FAILED',
+        statusCode: 500,
+      );
     }
     if (amount <= 0) {
-      throw ApiException('Số tiền không hợp lệ',
-          code: 'INVALID_AMOUNT', statusCode: 400);
+      throw ApiException(
+        'Số tiền không hợp lệ',
+        code: 'INVALID_AMOUNT',
+        statusCode: 400,
+      );
     }
     if (amount < 1000) {
-      throw ApiException('Tối thiểu 1000đ',
-          code: 'MIN_AMOUNT_1000', statusCode: 400);
+      throw ApiException(
+        'Tối thiểu 1000đ',
+        code: 'MIN_AMOUNT_1000',
+        statusCode: 400,
+      );
     }
     if (amount > mockWalletBalance) {
-      throw ApiException('Số dư ví không đủ để thực hiện giao dịch',
-          code: 'INSUFFICIENT_BALANCE', statusCode: 400);
+      throw ApiException(
+        'Số dư ví không đủ để thực hiện giao dịch',
+        code: 'INSUFFICIENT_BALANCE',
+        statusCode: 400,
+      );
     }
 
-    final fundIndex = mockFunds
-        .indexWhere((item) => (item['id'] ?? item['_id']) == fundId);
+    final fundIndex = mockFunds.indexWhere(
+      (item) => (item['id'] ?? item['_id']) == fundId,
+    );
     Map<String, dynamic> fund;
     if (fundIndex != -1) {
       fund = Map<String, dynamic>.from(mockFunds[fundIndex]);
@@ -318,8 +356,11 @@ class FakeAuthService implements AuthService {
       orElse: () => {'fundType': 'Hội nhóm'},
     );
     if (fund['fundType'] == 'Cá nhân') {
-      throw ApiException('Quỹ cá nhân không thể mời thành viên',
-          code: 'PERSONAL_FUND_CANNOT_INVITE', statusCode: 400);
+      throw ApiException(
+        'Quỹ cá nhân không thể mời thành viên',
+        code: 'PERSONAL_FUND_CANNOT_INVITE',
+        statusCode: 400,
+      );
     }
     final availableCandidates = mockCandidates.where((c) {
       final role = c['role']?.toString().toLowerCase();
@@ -359,8 +400,11 @@ class FakeAuthService implements AuthService {
     String? name,
   }) async {
     if (shouldFailSendInvite) {
-      throw ApiException('Gửi lời mời không thành công',
-          code: 'INVITE_FAILED', statusCode: 500);
+      throw ApiException(
+        'Gửi lời mời không thành công',
+        code: 'INVITE_FAILED',
+        statusCode: 500,
+      );
     }
     final candidate = mockCandidates.firstWhere(
       (c) =>
@@ -368,17 +412,24 @@ class FakeAuthService implements AuthService {
           c['_id'] == inviteeId ||
           c['phoneNumber'] == phoneNumber,
       orElse: () => throw ApiException(
-          'Người dùng chưa đăng ký tài khoản ví điện tử hoặc không tồn tại',
-          code: 'USER_NOT_FOUND',
-          statusCode: 400),
+        'Người dùng chưa đăng ký tài khoản ví điện tử hoặc không tồn tại',
+        code: 'USER_NOT_FOUND',
+        statusCode: 400,
+      ),
     );
     if (candidate['isMember'] == true) {
-      throw ApiException('Người dùng đã là thành viên của quỹ',
-          code: 'ALREADY_MEMBER', statusCode: 400);
+      throw ApiException(
+        'Người dùng đã là thành viên của quỹ',
+        code: 'ALREADY_MEMBER',
+        statusCode: 400,
+      );
     }
     if (candidate['hasPendingInvite'] == true) {
-      throw ApiException('Người dùng đã có lời mời tham gia quỹ',
-          code: 'PENDING_INVITATION_EXISTS', statusCode: 400);
+      throw ApiException(
+        'Người dùng đã có lời mời tham gia quỹ',
+        code: 'PENDING_INVITATION_EXISTS',
+        statusCode: 400,
+      );
     }
 
     candidate['hasPendingInvite'] = true;
@@ -454,8 +505,9 @@ class FakeAuthService implements AuthService {
 
   @override
   Future<Map<String, dynamic>> notifications(String token) async {
-    final unread =
-        mockNotificationsList.where((n) => n['isRead'] != true).length;
+    final unread = mockNotificationsList
+        .where((n) => n['isRead'] != true)
+        .length;
     return {
       'count': mockNotificationsList.length,
       'unreadCount': unread,
@@ -473,8 +525,9 @@ class FakeAuthService implements AuthService {
       orElse: () => throw ApiException('Thông báo không tồn tại'),
     );
     n['isRead'] = true;
-    final unread =
-        mockNotificationsList.where((item) => item['isRead'] != true).length;
+    final unread = mockNotificationsList
+        .where((item) => item['isRead'] != true)
+        .length;
     return {'message': 'Đã đánh dấu đã đọc', 'unreadCount': unread};
   }
 
@@ -557,22 +610,22 @@ class FakeAuthService implements AuthService {
   }
 
   AuthResult _result(String account) => AuthResult(
-        token: 'fake-jwt-token-for-$account',
-        user: AuthUser(
-          id: '65f0000000000000000000aa',
-          name: account,
-          email: '$account@gmail.com',
-          walletBalance: 1000000,
-          role: account.toLowerCase() == 'admin' ? 'admin' : 'user',
-        ),
-      );
+    token: 'fake-jwt-token-for-$account',
+    user: AuthUser(
+      id: '65f0000000000000000000aa',
+      name: account,
+      email: '$account@gmail.com',
+      walletBalance: 1000000,
+      role: account.toLowerCase() == 'admin' ? 'admin' : 'user',
+    ),
+  );
 }
 
 Widget buildApp({FakeAuthService? service}) => MyApp(
-      session: AppSession(
-        authService: service ?? FakeAuthService(acceptedPassword: '123456'),
-      ),
-    );
+  session: AppSession(
+    authService: service ?? FakeAuthService(acceptedPassword: '123456'),
+  ),
+);
 
 /// Cuộn tới nút trước khi bấm (nút có thể nằm ngoài khung nhìn 800x600 của test).
 Future<void> tapButton(WidgetTester tester, String text) async {
@@ -598,46 +651,54 @@ void main() {
     expect(find.text('Xin chào, admin'), findsOneWidget);
   });
 
-  testWidgets('Sai mật khẩu thì hiện thông báo lỗi và ở lại màn hình đăng nhập',
-      (tester) async {
-    await tester.pumpWidget(buildApp());
+  testWidgets(
+    'Sai mật khẩu thì hiện thông báo lỗi và ở lại màn hình đăng nhập',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'admin');
-    await tester.enterText(find.byType(TextFormField).at(1), 'sai-mat-khau');
-    await tapButton(tester, 'Đăng nhập');
-    await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).at(0), 'admin');
+      await tester.enterText(find.byType(TextFormField).at(1), 'sai-mat-khau');
+      await tapButton(tester, 'Đăng nhập');
+      await tester.pumpAndSettle();
 
-    expect(find.byType(LoginScreen), findsOneWidget);
-    expect(find.byType(HomeScreen), findsNothing);
-    expect(find.text('Tài khoản hoặc mật khẩu không đúng'), findsOneWidget);
-  });
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(HomeScreen), findsNothing);
+      expect(find.text('Tài khoản hoặc mật khẩu không đúng'), findsOneWidget);
+    },
+  );
 
-  testWidgets('Đăng ký: nhãn Trở về ở bên trái và quay lại màn hình đăng nhập',
-      (tester) async {
-    await tester.pumpWidget(buildApp());
+  testWidgets(
+    'Đăng ký: nhãn Trở về ở bên trái và quay lại màn hình đăng nhập',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
 
-    await tapButton(tester, 'Đăng ký');
-    await tester.pumpAndSettle();
+      await tapButton(tester, 'Đăng ký');
+      await tester.pumpAndSettle();
 
-    expect(find.byType(RegisterScreen), findsOneWidget);
-    expect(find.text('Xác thực mật khẩu'), findsOneWidget);
-    expect(find.widgetWithText(AppButton, 'Xác nhận đăng ký'), findsOneWidget);
+      expect(find.byType(RegisterScreen), findsOneWidget);
+      expect(find.text('Xác thực mật khẩu'), findsOneWidget);
+      expect(
+        find.widgetWithText(AppButton, 'Xác nhận đăng ký'),
+        findsOneWidget,
+      );
 
-    // Nút "Trở về" đã thay bằng label nằm bên trái.
-    final backLabel = find.byType(BackLabel);
-    expect(backLabel, findsOneWidget);
-    final screenWidth = tester.getSize(find.byType(RegisterScreen)).width;
-    expect(tester.getTopLeft(backLabel).dx, lessThan(screenWidth / 3));
+      // Nút "Trở về" đã thay bằng label nằm bên trái.
+      final backLabel = find.byType(BackLabel);
+      expect(backLabel, findsOneWidget);
+      final screenWidth = tester.getSize(find.byType(RegisterScreen)).width;
+      expect(tester.getTopLeft(backLabel).dx, lessThan(screenWidth / 3));
 
-    await tester.tap(find.text('Trở về'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Trở về'));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(LoginScreen), findsOneWidget);
-    expect(find.byType(RegisterScreen), findsNothing);
-  });
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(RegisterScreen), findsNothing);
+    },
+  );
 
-  testWidgets('Đăng ký thành công sẽ quay lại màn hình đăng nhập',
-      (tester) async {
+  testWidgets('Đăng ký thành công sẽ quay lại màn hình đăng nhập', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp());
     await tapButton(tester, 'Đăng ký');
     await tester.pumpAndSettle();
@@ -653,10 +714,12 @@ void main() {
     expect(find.textContaining('Đăng ký thành công'), findsOneWidget);
 
     // Tài khoản vừa tạo được điền sẵn, mật khẩu để trống, chưa tự đăng nhập.
-    final accountField =
-        tester.widget<TextFormField>(find.byType(TextFormField).at(0));
-    final passwordField =
-        tester.widget<TextFormField>(find.byType(TextFormField).at(1));
+    final accountField = tester.widget<TextFormField>(
+      find.byType(TextFormField).at(0),
+    );
+    final passwordField = tester.widget<TextFormField>(
+      find.byType(TextFormField).at(1),
+    );
     expect(accountField.controller!.text, 'nguyenvana');
     expect(passwordField.controller!.text, isEmpty);
     final session = AppScope.of(tester.element(find.byType(LoginScreen)));
@@ -669,14 +732,19 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-        find.byType(TextFormField).at(0), 'a' * (kMaxAccountLength + 1));
+      find.byType(TextFormField).at(0),
+      'a' * (kMaxAccountLength + 1),
+    );
     await tester.enterText(find.byType(TextFormField).at(1), '123456');
     await tester.enterText(find.byType(TextFormField).at(2), '123456');
     await tapButton(tester, 'Xác nhận đăng ký');
     await tester.pumpAndSettle();
 
     expect(find.byType(RegisterScreen), findsOneWidget);
-    expect(find.text('Tài khoản tối đa $kMaxAccountLength ký tự'), findsOneWidget);
+    expect(
+      find.text('Tài khoản tối đa $kMaxAccountLength ký tự'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Tài khoản đã tồn tại sẽ hiện lỗi từ server', (tester) async {
@@ -694,20 +762,25 @@ void main() {
     expect(find.text('Tài khoản đã tồn tại'), findsOneWidget);
   });
 
-  testWidgets('Trang chủ có nút Trang cá nhân hình vuông tròn ở góc trên bên phải', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await _login(tester, account: 'admin', password: '123456');
+  testWidgets(
+    'Trang chủ có nút Trang cá nhân hình vuông tròn ở góc trên bên phải',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await _login(tester, account: 'admin', password: '123456');
 
-    expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(HomeScreen), findsOneWidget);
 
-    final profileBtn = find.byTooltip('Trang cá nhân');
-    expect(profileBtn, findsOneWidget);
+      final profileBtn = find.byTooltip('Trang cá nhân');
+      expect(profileBtn, findsOneWidget);
 
-    final screenWidth = tester.getSize(find.byType(HomeScreen)).width;
-    expect(tester.getTopRight(profileBtn).dx, closeTo(screenWidth - 18, 1.5));
-  });
+      final screenWidth = tester.getSize(find.byType(HomeScreen)).width;
+      expect(tester.getTopRight(profileBtn).dx, closeTo(screenWidth - 18, 1.5));
+    },
+  );
 
-  testWidgets('Đăng xuất từ Trang cá nhân quay về màn hình đăng nhập', (tester) async {
+  testWidgets('Đăng xuất từ Trang cá nhân quay về màn hình đăng nhập', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
 
@@ -759,8 +832,9 @@ void main() {
     expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
-  testWidgets('Đổi mật khẩu: sai mật khẩu cũ sẽ hiện lỗi của server',
-      (tester) async {
+  testWidgets('Đổi mật khẩu: sai mật khẩu cũ sẽ hiện lỗi của server', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
 
@@ -782,8 +856,9 @@ void main() {
     expect(find.text('Mật khẩu cũ không đúng'), findsOneWidget);
   });
 
-  testWidgets('Đổi mật khẩu: mật khẩu mới khác xác thực sẽ bị chặn',
-      (tester) async {
+  testWidgets('Đổi mật khẩu: mật khẩu mới khác xác thực sẽ bị chặn', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
 
@@ -804,7 +879,9 @@ void main() {
     expect(find.text('Xác thực mật khẩu không khớp'), findsOneWidget);
   });
 
-  testWidgets('Đổi mật khẩu thành công sẽ quay về trang cá nhân', (tester) async {
+  testWidgets('Đổi mật khẩu thành công sẽ quay về trang cá nhân', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
 
@@ -827,68 +904,80 @@ void main() {
     expect(find.textContaining('Đổi mật khẩu thành công'), findsOneWidget);
   });
 
-  testWidgets('Giao diện hiển thị chuẩn xác trên kích thước màn hình iPhone 18',
-      (tester) async {
-    tester.view.physicalSize = const Size(kIPhone18Width, kIPhone18Height);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'Giao diện hiển thị chuẩn xác trên kích thước màn hình iPhone 18',
+    (tester) async {
+      tester.view.physicalSize = const Size(kIPhone18Width, kIPhone18Height);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(buildApp());
-    expect(find.byType(LoginScreen), findsOneWidget);
+      await tester.pumpWidget(buildApp());
+      expect(find.byType(LoginScreen), findsOneWidget);
 
-    await _login(tester, account: 'admin', password: '123456');
-    expect(find.byType(HomeScreen), findsOneWidget);
-    expect(find.text('Ví điện tử DTY'), findsOneWidget);
-    expect(find.text('1.000.000 đ'), findsOneWidget);
+      await _login(tester, account: 'admin', password: '123456');
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.text('Ví điện tử DTY'), findsOneWidget);
+      expect(find.text('1.000.000 đ'), findsOneWidget);
 
-    // Kiểm tra nút Trang cá nhân ở góc trên bên phải
-    final profileBtn = find.byTooltip('Trang cá nhân');
-    expect(profileBtn, findsOneWidget);
-  });
+      // Kiểm tra nút Trang cá nhân ở góc trên bên phải
+      final profileBtn = find.byTooltip('Trang cá nhân');
+      expect(profileBtn, findsOneWidget);
+    },
+  );
 
-  testWidgets('Trang chủ: có đủ 6 nút tính năng và bấm nút Trang cá nhân mở ProfileScreen',
-      (tester) async {
-    await tester.pumpWidget(buildApp());
-    await _login(tester, account: 'admin', password: '123456');
+  testWidgets(
+    'Trang chủ: có đủ 6 nút tính năng và bấm nút Trang cá nhân mở ProfileScreen',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await _login(tester, account: 'admin', password: '123456');
 
-    expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(HomeScreen), findsOneWidget);
 
-    // Kiểm tra đủ 6 tính năng (không có dấu + ở đầu)
-    expect(find.text('Nạp ví'), findsOneWidget);
-    expect(find.text('Nạp đt/data'), findsOneWidget);
-    expect(find.text('L.sử giao dịch'), findsOneWidget);
-    expect(find.text('Thanh toán hđ'), findsOneWidget);
-    expect(find.text('Quỹ'), findsOneWidget);
-    expect(find.text('Hũ chi tiêu'), findsOneWidget);
+      // Kiểm tra đủ 6 tính năng (không có dấu + ở đầu)
+      expect(find.text('Nạp ví'), findsOneWidget);
+      expect(find.text('Nạp đt/data'), findsOneWidget);
+      expect(find.text('L.sử giao dịch'), findsOneWidget);
+      expect(find.text('Thanh toán hđ'), findsOneWidget);
+      expect(find.text('Quỹ'), findsOneWidget);
+      expect(find.text('Hũ chi tiêu'), findsOneWidget);
 
-    // Bấm nút Trang cá nhân trên cùng bên phải
-    final profileBtn = find.byTooltip('Trang cá nhân');
-    expect(profileBtn, findsOneWidget);
-    await tester.tap(profileBtn);
-    await tester.pumpAndSettle();
+      // Bấm nút Trang cá nhân trên cùng bên phải
+      final profileBtn = find.byTooltip('Trang cá nhân');
+      expect(profileBtn, findsOneWidget);
+      await tester.tap(profileBtn);
+      await tester.pumpAndSettle();
 
-    // Xác nhận đã vào màn hình ProfileScreen
-    expect(find.byType(ProfileScreen), findsOneWidget);
-    expect(find.text('Trang chủ'), findsOneWidget); // Nút BackLabel
-    expect(find.text('Mã PIN giao dịch'), findsOneWidget);
-    expect(find.text('Đổi mật khẩu'), findsOneWidget);
-    expect(find.widgetWithText(AppButton, 'Đăng xuất tài khoản'), findsOneWidget);
+      // Xác nhận đã vào màn hình ProfileScreen
+      expect(find.byType(ProfileScreen), findsOneWidget);
+      expect(find.text('Trang chủ'), findsOneWidget); // Nút BackLabel
+      expect(find.text('Mã PIN giao dịch'), findsOneWidget);
+      expect(find.text('Đổi mật khẩu'), findsOneWidget);
+      expect(
+        find.widgetWithText(AppButton, 'Đăng xuất tài khoản'),
+        findsOneWidget,
+      );
 
-    // Bấm quay lại Trang chủ
-    await tester.tap(find.text('Trang chủ'));
-    await tester.pumpAndSettle();
-    expect(find.byType(HomeScreen), findsOneWidget);
-  });
+      // Bấm quay lại Trang chủ
+      await tester.tap(find.text('Trang chủ'));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeScreen), findsOneWidget);
+    },
+  );
 
-  test('Định dạng tiền tệ formatVnd: 0 thành 0 đ và 1000000 thành 1.000.000 đ', () {
-    expect(formatVnd(0), '0 đ');
-    expect(formatVnd(1000000), '1.000.000 đ');
-    expect(formatVnd(50000), '50.000 đ');
-    expect(formatVnd(null), '0 đ');
-  });
+  test(
+    'Định dạng tiền tệ formatVnd: 0 thành 0 đ và 1000000 thành 1.000.000 đ',
+    () {
+      expect(formatVnd(0), '0 đ');
+      expect(formatVnd(1000000), '1.000.000 đ');
+      expect(formatVnd(50000), '50.000 đ');
+      expect(formatVnd(null), '0 đ');
+    },
+  );
 
-  testWidgets('Trang chủ: Nút ẩn/hiện số dư nổi bật và hoạt động chính xác', (tester) async {
+  testWidgets('Trang chủ: Nút ẩn/hiện số dư nổi bật và hoạt động chính xác', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
 
@@ -914,944 +1003,1067 @@ void main() {
     expect(find.text('Ẩn'), findsOneWidget);
   });
 
-  testWidgets('Trang chủ: Nút Nạp tiền cùng hàng với số dư và mở sheet Nạp tiền', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await _login(tester, account: 'admin', password: '123456');
-
-    expect(find.byType(HomeScreen), findsOneWidget);
-    final depositBtn = find.text('Nạp tiền');
-    expect(depositBtn, findsOneWidget);
-
-    await tester.tap(depositBtn);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Nạp tiền vào ví'), findsOneWidget);
-  });
-
-  testWidgets('Trang chủ: Phần Ưu đãi & Khuyến mãi có 2 phần tử mới tương tác mở Quỹ và Hũ chi tiêu', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await _login(tester, account: 'admin', password: '123456');
-
-    expect(find.byType(HomeScreen), findsOneWidget);
-
-    // Kiểm tra hiển thị phần tử 1: Quỹ tiết kiệm
-    final fundPromo = find.text('Lập quỹ tiết kiệm cho bản thân và gia đình');
-    await tester.ensureVisible(fundPromo);
-    expect(fundPromo, findsOneWidget);
-    expect(find.text('Tạo quỹ cá nhân, cặp đôi, tích luỹ, ...'), findsOneWidget);
-
-    // Kiểm tra hiển thị phần tử 2: Chi tiêu tháng theo thời gian thực và thời gian cập nhật
-    final currentMonth = DateTime.now().month;
-    final spendingPromo = find.text('Chi tiêu tháng $currentMonth');
-    expect(spendingPromo, findsOneWidget);
-    expect(find.textContaining('Cập nhật lúc'), findsOneWidget);
-
-    // Bấm vào phần tử Quỹ -> Mở Quỹ tiết kiệm & Đầu tư sheet
-    await tester.tap(fundPromo);
-    await tester.pumpAndSettle();
-    expect(find.text('Quỹ tiết kiệm & Đầu tư'), findsOneWidget);
-
-    // Đóng sheet
-    await tester.tap(find.byIcon(Icons.close_rounded));
-    await tester.pumpAndSettle();
-
-    // Bấm vào phần tử Chi tiêu tháng -> Mở Hũ chi tiêu sheet
-    await tester.tap(spendingPromo);
-    await tester.pumpAndSettle();
-    expect(find.text('Hũ chi tiêu (6 Jars)'), findsOneWidget);
-  });
-
-  group('Use Case 04: Thêm quỹ', () {
-    testWidgets('Từ Trang chủ mở Quỹ và bấm Tạo quỹ sẽ hiển thị giao diện Tạo quỹ', (tester) async {
+  testWidgets(
+    'Trang chủ: Nút Nạp tiền cùng hàng với số dư và mở sheet Nạp tiền',
+    (tester) async {
       await tester.pumpWidget(buildApp());
       await _login(tester, account: 'admin', password: '123456');
 
+      expect(find.byType(HomeScreen), findsOneWidget);
+      final depositBtn = find.text('Nạp tiền');
+      expect(depositBtn, findsOneWidget);
+
+      await tester.tap(depositBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nạp tiền vào ví'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Trang chủ: Phần Ưu đãi & Khuyến mãi có 2 phần tử mới tương tác mở Quỹ và Hũ chi tiêu',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await _login(tester, account: 'admin', password: '123456');
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+
+      // Kiểm tra hiển thị phần tử 1: Quỹ tiết kiệm
       final fundPromo = find.text('Lập quỹ tiết kiệm cho bản thân và gia đình');
       await tester.ensureVisible(fundPromo);
+      expect(fundPromo, findsOneWidget);
+      expect(
+        find.text('Tạo quỹ cá nhân, cặp đôi, tích luỹ, ...'),
+        findsOneWidget,
+      );
+
+      // Kiểm tra hiển thị phần tử 2: Chi tiêu tháng theo thời gian thực và thời gian cập nhật
+      final currentMonth = DateTime.now().month;
+      final spendingPromo = find.text('Chi tiêu tháng $currentMonth');
+      expect(spendingPromo, findsOneWidget);
+      expect(find.textContaining('Cập nhật lúc'), findsOneWidget);
+
+      // Bấm vào phần tử Quỹ -> Mở Quỹ tiết kiệm & Đầu tư sheet
       await tester.tap(fundPromo);
       await tester.pumpAndSettle();
-
       expect(find.text('Quỹ tiết kiệm & Đầu tư'), findsOneWidget);
-      expect(find.widgetWithText(AppButton, 'Tạo quỹ'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(AppButton, 'Tạo quỹ'));
+      // Đóng sheet
+      await tester.tap(find.byIcon(Icons.close_rounded));
       await tester.pumpAndSettle();
 
-      expect(find.byType(CreateFundScreen), findsOneWidget);
-      expect(find.text('Tạo quỹ'), findsWidgets);
-      expect(find.text('Cá nhân'), findsOneWidget);
-      expect(find.text('Cặp đôi'), findsOneWidget);
-      expect(find.text('Tích lũy'), findsOneWidget);
-      expect(find.text('Hội nhóm'), findsOneWidget);
-    });
+      // Bấm vào phần tử Chi tiêu tháng -> Mở Hũ chi tiêu sheet
+      await tester.tap(spendingPromo);
+      await tester.pumpAndSettle();
+      expect(find.text('Hũ chi tiêu (6 Jars)'), findsOneWidget);
+    },
+  );
 
-    testWidgets('E1: Người dùng đã làm chủ từ 10 quỹ trở lên hiển thị "Không thể tạo thêm quỹ"', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      fakeService.mockFunds = List.generate(
-        10,
-        (i) => {'name': 'Quỹ $i', 'fundType': 'Cá nhân', 'targetAmount': 0},
-      );
+  group('Use Case 04: Thêm quỹ', () {
+    testWidgets(
+      'Từ Trang chủ mở Quỹ và bấm Tạo quỹ sẽ hiển thị giao diện Tạo quỹ',
+      (tester) async {
+        await tester.pumpWidget(buildApp());
+        await _login(tester, account: 'admin', password: '123456');
 
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
+        final fundPromo = find.text(
+          'Lập quỹ tiết kiệm cho bản thân và gia đình',
+        );
+        await tester.ensureVisible(fundPromo);
+        await tester.tap(fundPromo);
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: CreateFundScreen(initialFundCount: 10),
+        expect(find.text('Quỹ tiết kiệm & Đầu tư'), findsOneWidget);
+        expect(find.widgetWithText(AppButton, 'Tạo quỹ'), findsOneWidget);
+
+        await tester.tap(find.widgetWithText(AppButton, 'Tạo quỹ'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(CreateFundScreen), findsOneWidget);
+        expect(find.text('Tạo quỹ'), findsWidgets);
+        expect(find.text('Cá nhân'), findsOneWidget);
+        expect(find.text('Cặp đôi'), findsOneWidget);
+        expect(find.text('Tích lũy'), findsOneWidget);
+        expect(find.text('Hội nhóm'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'E1: Người dùng đã làm chủ từ 10 quỹ trở lên hiển thị "Không thể tạo thêm quỹ"',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockFunds = List.generate(
+          10,
+          (i) => {'name': 'Quỹ $i', 'fundType': 'Cá nhân', 'targetAmount': 0},
+        );
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: CreateFundScreen(initialFundCount: 10),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Không thể tạo thêm quỹ'), findsOneWidget);
-    });
+        expect(find.text('Không thể tạo thêm quỹ'), findsOneWidget);
+      },
+    );
 
-    testWidgets('E2 & E8: Chưa chọn loại quỹ bấm Tạo quỹ báo "Vui lòng chọn loại quỹ" và "Vui lòng nhập đầy đủ thông tin"', (tester) async {
-      final session = AppSession(authService: FakeAuthService(acceptedPassword: '123456'));
-      await session.login(account: 'admin', password: '123456');
+    testWidgets(
+      'E2 & E8: Chưa chọn loại quỹ bấm Tạo quỹ báo "Vui lòng chọn loại quỹ" và "Vui lòng nhập đầy đủ thông tin"',
+      (tester) async {
+        final session = AppSession(
+          authService: FakeAuthService(acceptedPassword: '123456'),
+        );
+        await session.login(account: 'admin', password: '123456');
 
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: CreateFundScreen(initialFundCount: 0),
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: CreateFundScreen(initialFundCount: 0),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      await tapButton(tester, 'Tạo quỹ');
-      await tester.pumpAndSettle();
+        await tapButton(tester, 'Tạo quỹ');
+        await tester.pumpAndSettle();
 
-      expect(find.text('Vui lòng chọn loại quỹ'), findsOneWidget);
-      expect(find.text('Vui lòng nhập đầy đủ thông tin'), findsOneWidget);
-    });
+        expect(find.text('Vui lòng chọn loại quỹ'), findsOneWidget);
+        expect(find.text('Vui lòng nhập đầy đủ thông tin'), findsOneWidget);
+      },
+    );
 
-    testWidgets('E3: Chọn loại quỹ nhưng để trống tên quỹ báo "Vui lòng nhập tên quỹ"', (tester) async {
-      final session = AppSession(authService: FakeAuthService(acceptedPassword: '123456'));
-      await session.login(account: 'admin', password: '123456');
+    testWidgets(
+      'E3: Chọn loại quỹ nhưng để trống tên quỹ báo "Vui lòng nhập tên quỹ"',
+      (tester) async {
+        final session = AppSession(
+          authService: FakeAuthService(acceptedPassword: '123456'),
+        );
+        await session.login(account: 'admin', password: '123456');
 
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: CreateFundScreen(initialFundCount: 0),
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: CreateFundScreen(initialFundCount: 0),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Chọn loại Cá nhân
-      await tester.tap(find.text('Cá nhân'));
-      await tester.pumpAndSettle();
+        // Chọn loại Cá nhân
+        await tester.tap(find.text('Cá nhân'));
+        await tester.pumpAndSettle();
 
-      // Trường Tên quỹ xuất hiện
-      expect(find.text('Tên quỹ *'), findsOneWidget);
+        // Trường Tên quỹ xuất hiện
+        expect(find.text('Tên quỹ *'), findsOneWidget);
 
-      await tapButton(tester, 'Tạo quỹ');
-      await tester.pumpAndSettle();
+        await tapButton(tester, 'Tạo quỹ');
+        await tester.pumpAndSettle();
 
-      expect(find.text('Vui lòng nhập tên quỹ'), findsOneWidget);
-      expect(find.text('Vui lòng nhập đầy đủ thông tin'), findsOneWidget);
-    });
+        expect(find.text('Vui lòng nhập tên quỹ'), findsOneWidget);
+        expect(find.text('Vui lòng nhập đầy đủ thông tin'), findsOneWidget);
+      },
+    );
 
-    testWidgets('E4: Tên quỹ tối đa 60 ký tự và không cho nhập vượt quá 60 ký tự', (tester) async {
-      final session = AppSession(authService: FakeAuthService(acceptedPassword: '123456'));
-      await session.login(account: 'admin', password: '123456');
+    testWidgets(
+      'E4: Tên quỹ tối đa 60 ký tự và không cho nhập vượt quá 60 ký tự',
+      (tester) async {
+        final session = AppSession(
+          authService: FakeAuthService(acceptedPassword: '123456'),
+        );
+        await session.login(account: 'admin', password: '123456');
 
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: CreateFundScreen(initialFundCount: 0),
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: CreateFundScreen(initialFundCount: 0),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Cá nhân'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Cá nhân'));
+        await tester.pumpAndSettle();
 
-      final nameField = find.byType(TextFormField).first;
-      // Nhập chuỗi 70 ký tự
-      await tester.enterText(nameField, 'A' * 70);
-      await tester.pumpAndSettle();
+        final nameField = find.byType(TextFormField).first;
+        // Nhập chuỗi 70 ký tự
+        await tester.enterText(nameField, 'A' * 70);
+        await tester.pumpAndSettle();
 
-      final controller = tester.widget<TextFormField>(nameField).controller!;
-      expect(controller.text.length, equals(60));
-    });
+        final controller = tester.widget<TextFormField>(nameField).controller!;
+        expect(controller.text.length, equals(60));
+      },
+    );
 
-    testWidgets('E5, E6, E7: Quỹ Tích lũy kiểm tra số tiền mục tiêu và ngày hoàn thành', (tester) async {
-      final session = AppSession(authService: FakeAuthService(acceptedPassword: '123456'));
-      await session.login(account: 'admin', password: '123456');
+    testWidgets(
+      'E5, E6, E7: Quỹ Tích lũy kiểm tra số tiền mục tiêu và ngày hoàn thành',
+      (tester) async {
+        final session = AppSession(
+          authService: FakeAuthService(acceptedPassword: '123456'),
+        );
+        await session.login(account: 'admin', password: '123456');
 
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: CreateFundScreen(initialFundCount: 0),
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: CreateFundScreen(initialFundCount: 0),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Chọn loại Tích lũy
-      await tester.tap(find.text('Tích lũy'));
-      await tester.pumpAndSettle();
+        // Chọn loại Tích lũy
+        await tester.tap(find.text('Tích lũy'));
+        await tester.pumpAndSettle();
 
-      // Hiển thị cả 3 trường: Tên quỹ, Số tiền mục tiêu, Ngày hoàn thành
-      expect(find.text('Tên quỹ *'), findsOneWidget);
-      expect(find.text('Số tiền mục tiêu *'), findsOneWidget);
-      expect(find.text('Ngày hoàn thành mục tiêu *'), findsOneWidget);
+        // Hiển thị cả 3 trường: Tên quỹ, Số tiền mục tiêu, Ngày hoàn thành
+        expect(find.text('Tên quỹ *'), findsOneWidget);
+        expect(find.text('Số tiền mục tiêu *'), findsOneWidget);
+        expect(find.text('Ngày hoàn thành mục tiêu *'), findsOneWidget);
 
-      // Nhập tên quỹ hợp lệ
-      await tester.enterText(find.byType(TextFormField).at(0), 'Quỹ mua nhà');
+        // Nhập tên quỹ hợp lệ
+        await tester.enterText(find.byType(TextFormField).at(0), 'Quỹ mua nhà');
 
-      // Bấm Tạo quỹ khi chưa nhập tiền và chưa chọn ngày
-      await tapButton(tester, 'Tạo quỹ');
-      await tester.pumpAndSettle();
+        // Bấm Tạo quỹ khi chưa nhập tiền và chưa chọn ngày
+        await tapButton(tester, 'Tạo quỹ');
+        await tester.pumpAndSettle();
 
-      expect(find.text('Vui lòng nhập số tiền mục tiêu'), findsOneWidget);
-      expect(find.text('Vui lòng chọn ngày hoàn thành mục tiêu'), findsOneWidget);
-      expect(find.text('Vui lòng nhập đầy đủ thông tin'), findsOneWidget);
+        expect(find.text('Vui lòng nhập số tiền mục tiêu'), findsOneWidget);
+        expect(
+          find.text('Vui lòng chọn ngày hoàn thành mục tiêu'),
+          findsOneWidget,
+        );
+        expect(find.text('Vui lòng nhập đầy đủ thông tin'), findsOneWidget);
 
-      // Nhập số tiền = 0 hoặc âm -> E6: Số tiền mục tiêu phải lớn hơn 0
-      await tester.enterText(find.byType(TextFormField).at(1), '0');
-      await tapButton(tester, 'Tạo quỹ');
-      await tester.pumpAndSettle();
+        // Nhập số tiền = 0 hoặc âm -> E6: Số tiền mục tiêu phải lớn hơn 0
+        await tester.enterText(find.byType(TextFormField).at(1), '0');
+        await tapButton(tester, 'Tạo quỹ');
+        await tester.pumpAndSettle();
 
-      expect(find.text('Số tiền mục tiêu phải lớn hơn 0'), findsOneWidget);
-    });
+        expect(find.text('Số tiền mục tiêu phải lớn hơn 0'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Luồng thành công 3.1: Tạo quỹ Cá nhân thành công thông báo "Tạo quỹ thành công"', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
+    testWidgets(
+      'Luồng thành công 3.1: Tạo quỹ Cá nhân thành công thông báo "Tạo quỹ thành công"',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
 
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: CreateFundScreen(initialFundCount: 0),
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: CreateFundScreen(initialFundCount: 0),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Chọn loại Cá nhân
-      await tester.tap(find.text('Cá nhân'));
-      await tester.pumpAndSettle();
+        // Chọn loại Cá nhân
+        await tester.tap(find.text('Cá nhân'));
+        await tester.pumpAndSettle();
 
-      // Nhập tên quỹ
-      await tester.enterText(find.byType(TextFormField).first, 'Quỹ cá nhân của tôi');
-      await tapButton(tester, 'Tạo quỹ');
-      await tester.pumpAndSettle();
+        // Nhập tên quỹ
+        await tester.enterText(
+          find.byType(TextFormField).first,
+          'Quỹ cá nhân của tôi',
+        );
+        await tapButton(tester, 'Tạo quỹ');
+        await tester.pumpAndSettle();
 
-      expect(find.text('Tạo quỹ thành công'), findsOneWidget);
-      expect(fakeService.mockFunds.length, equals(1));
-      expect(fakeService.mockFunds.first['name'], equals('Quỹ cá nhân của tôi'));
-      expect(fakeService.mockFunds.first['fundType'], equals('Cá nhân'));
-    });
+        expect(find.text('Tạo quỹ thành công'), findsOneWidget);
+        expect(fakeService.mockFunds.length, equals(1));
+        expect(
+          fakeService.mockFunds.first['name'],
+          equals('Quỹ cá nhân của tôi'),
+        );
+        expect(fakeService.mockFunds.first['fundType'], equals('Cá nhân'));
+      },
+    );
 
-    testWidgets('Luồng thành công 3.3: Tạo quỹ Tích lũy thành công với số tiền và ngày hoàn thành', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
+    testWidgets(
+      'Luồng thành công 3.3: Tạo quỹ Tích lũy thành công với số tiền và ngày hoàn thành',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
 
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: CreateFundScreen(initialFundCount: 0),
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: CreateFundScreen(initialFundCount: 0),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Chọn loại Tích lũy
-      await tester.tap(find.text('Tích lũy'));
-      await tester.pumpAndSettle();
+        // Chọn loại Tích lũy
+        await tester.tap(find.text('Tích lũy'));
+        await tester.pumpAndSettle();
 
-      // Nhập tên quỹ
-      await tester.enterText(find.byType(TextFormField).at(0), 'Quỹ mua xe');
+        // Nhập tên quỹ
+        await tester.enterText(find.byType(TextFormField).at(0), 'Quỹ mua xe');
 
-      // Nhập số tiền mục tiêu hợp lệ (> 0)
-      await tester.enterText(find.byType(TextFormField).at(1), '50000000');
-      await tester.pumpAndSettle();
+        // Nhập số tiền mục tiêu hợp lệ (> 0)
+        await tester.enterText(find.byType(TextFormField).at(1), '50000000');
+        await tester.pumpAndSettle();
 
-      // Chọn ngày hoàn thành mục tiêu
-      final datePickerFinder = find.text('Chọn ngày hoàn thành mục tiêu');
-      await tester.ensureVisible(datePickerFinder);
-      await tester.tap(datePickerFinder);
-      await tester.pumpAndSettle();
-      // Bấm OK trên DatePicker
-      final okBtn = find.text('OK');
-      await tester.tap(okBtn);
-      await tester.pumpAndSettle();
+        // Chọn ngày hoàn thành mục tiêu
+        final datePickerFinder = find.text('Chọn ngày hoàn thành mục tiêu');
+        await tester.ensureVisible(datePickerFinder);
+        await tester.tap(datePickerFinder);
+        await tester.pumpAndSettle();
+        // Bấm OK trên DatePicker
+        final okBtn = find.text('OK');
+        await tester.tap(okBtn);
+        await tester.pumpAndSettle();
 
-      // Bấm Tạo quỹ
-      await tapButton(tester, 'Tạo quỹ');
-      await tester.pumpAndSettle();
+        // Bấm Tạo quỹ
+        await tapButton(tester, 'Tạo quỹ');
+        await tester.pumpAndSettle();
 
-      expect(find.text('Tạo quỹ thành công'), findsOneWidget);
-      expect(fakeService.mockFunds.length, equals(1));
-      expect(fakeService.mockFunds.first['name'], equals('Quỹ mua xe'));
-      expect(fakeService.mockFunds.first['fundType'], equals('Tích lũy'));
-      expect(fakeService.mockFunds.first['targetAmount'], equals(50000000));
-    });
+        expect(find.text('Tạo quỹ thành công'), findsOneWidget);
+        expect(fakeService.mockFunds.length, equals(1));
+        expect(fakeService.mockFunds.first['name'], equals('Quỹ mua xe'));
+        expect(fakeService.mockFunds.first['fundType'], equals('Tích lũy'));
+        expect(fakeService.mockFunds.first['targetAmount'], equals(50000000));
+      },
+    );
 
-    testWidgets('Giao diện Quỹ là màn hình riêng biệt FundsScreen khi bấm nút Quỹ ở Trang chủ', (tester) async {
-      await tester.pumpWidget(buildApp());
-      await _login(tester, account: 'admin', password: '123456');
+    testWidgets(
+      'Giao diện Quỹ là màn hình riêng biệt FundsScreen khi bấm nút Quỹ ở Trang chủ',
+      (tester) async {
+        await tester.pumpWidget(buildApp());
+        await _login(tester, account: 'admin', password: '123456');
 
-      final fundButton = find.text('Quỹ');
-      await tester.ensureVisible(fundButton);
-      await tester.tap(fundButton);
-      await tester.pumpAndSettle();
+        final fundButton = find.text('Quỹ');
+        await tester.ensureVisible(fundButton);
+        await tester.tap(fundButton);
+        await tester.pumpAndSettle();
 
-      // Xác nhận đang ở màn hình riêng biệt FundsScreen (không phải ModalBottomSheet)
-      expect(find.byType(FundsScreen), findsOneWidget);
-      expect(find.text('Quỹ tiết kiệm & Đầu tư'), findsOneWidget);
-      expect(find.widgetWithText(AppButton, 'Tạo quỹ'), findsOneWidget);
-      expect(find.text('Trang chủ'), findsOneWidget);
+        // Xác nhận đang ở màn hình riêng biệt FundsScreen (không phải ModalBottomSheet)
+        expect(find.byType(FundsScreen), findsOneWidget);
+        expect(find.text('Quỹ tiết kiệm & Đầu tư'), findsOneWidget);
+        expect(find.widgetWithText(AppButton, 'Tạo quỹ'), findsOneWidget);
+        expect(find.text('Trang chủ'), findsOneWidget);
 
-      // Quay lại Trang chủ
-      await tester.tap(find.text('Trang chủ'));
-      await tester.pumpAndSettle();
-      expect(find.byType(HomeScreen), findsOneWidget);
-    });
+        // Quay lại Trang chủ
+        await tester.tap(find.text('Trang chủ'));
+        await tester.pumpAndSettle();
+        expect(find.byType(HomeScreen), findsOneWidget);
+      },
+    );
 
-    testWidgets('Xoá quỹ: hiển thị nút xoá, hộp thoại xác nhận và xoá quỹ thành công', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      fakeService.mockFunds = [
-        {
-          'id': 'fund_1',
-          'name': 'Quỹ du lịch Phú Quốc',
-          'fundType': 'Cá nhân',
-          'targetAmount': 10000000,
-        },
-      ];
+    testWidgets(
+      'Giao diện danh sách quỹ: không hiển thị nút xoá quỹ trực tiếp; việc xoá quỹ được thực hiện trong màn hình Chi tiết quỹ',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockFunds = [
+          {
+            'id': 'fund_1',
+            '_id': 'fund_1',
+            'name': 'Quỹ du lịch Phú Quốc',
+            'fundType': 'Cá nhân',
+            'userId': '65f0000000000000000000aa',
+            'targetAmount': 10000000,
+          },
+        ];
 
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
 
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: FundsScreen(),
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: FundsScreen()),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Kiểm tra quỹ hiển thị trong danh sách
-      expect(find.text('Quỹ du lịch Phú Quốc'), findsOneWidget);
+        // Kiểm tra quỹ hiển thị trong danh sách
+        expect(find.text('Quỹ du lịch Phú Quốc'), findsOneWidget);
 
-      // Nút Xoá quỹ hiển thị
-      final deleteBtn = find.byTooltip('Xoá quỹ');
-      expect(deleteBtn, findsOneWidget);
+        // Nút Xoá quỹ KHÔNG CÒN hiển thị trực tiếp ở danh sách quỹ
+        expect(find.byTooltip('Xoá quỹ'), findsNothing);
+        expect(find.byIcon(Icons.delete_outline_rounded), findsNothing);
 
-      // 1. Thử bấm Xoá -> hiện hộp thoại xác nhận -> bấm Huỷ
-      await tester.tap(deleteBtn);
-      await tester.pumpAndSettle();
+        // Bấm vào quỹ để mở Chi tiết quỹ (FundDetailScreen)
+        await tester.tap(find.text('Quỹ du lịch Phú Quốc'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Xác nhận xoá quỹ'), findsOneWidget);
-      expect(find.textContaining('Bạn có chắc chắn muốn xoá quỹ "Quỹ du lịch Phú Quốc" không?'), findsOneWidget);
+        expect(find.byType(FundDetailScreen), findsOneWidget);
 
-      await tester.tap(find.text('Huỷ'));
-      await tester.pumpAndSettle();
+        // Trong Chi tiết quỹ, chủ quỹ có nút "Xoá quỹ này"
+        final deleteBtn = find.byKey(const ValueKey('delete_fund_button'));
+        expect(deleteBtn, findsOneWidget);
 
-      // Quỹ vẫn còn
-      expect(find.text('Quỹ du lịch Phú Quốc'), findsOneWidget);
-      expect(fakeService.mockFunds.length, equals(1));
+        // Bấm Xoá -> hiện hộp thoại xác nhận -> bấm xác nhận "Xoá quỹ"
+        await tester.tap(deleteBtn);
+        await tester.pumpAndSettle();
 
-      // 2. Bấm Xoá -> hiện hộp thoại -> bấm nút xác nhận "Xoá quỹ"
-      await tester.tap(deleteBtn);
-      await tester.pumpAndSettle();
+        expect(find.text('Xác nhận xoá quỹ'), findsOneWidget);
+        final confirmDeleteBtn = find.widgetWithText(ElevatedButton, 'Xoá quỹ');
+        await tester.tap(confirmDeleteBtn);
+        await tester.pumpAndSettle();
 
-      final confirmDeleteBtn = find.widgetWithText(ElevatedButton, 'Xoá quỹ');
-      await tester.tap(confirmDeleteBtn);
-      await tester.pumpAndSettle();
-
-      // Thông báo thành công và danh sách được làm mới
-      expect(find.textContaining('Xoá quỹ "Quỹ du lịch Phú Quốc" thành công'), findsOneWidget);
-      expect(fakeService.mockFunds.isEmpty, isTrue);
-      expect(find.text('Chưa có quỹ nào được tạo'), findsOneWidget);
-    });
+        // Quay lại màn hình danh sách quỹ và quỹ đã bị xoá
+        expect(find.byType(FundsScreen), findsOneWidget);
+        expect(fakeService.mockFunds.isEmpty, isTrue);
+        expect(find.text('Chưa có quỹ nào được tạo'), findsOneWidget);
+      },
+    );
   });
 
   group('Chức năng Xem chi tiết quỹ & Góp tiền vào quỹ (Use Case 05)', () {
-    testWidgets('Xem chi tiết quỹ: từ FundsScreen bấm vào quỹ sẽ mở giao diện riêng FundDetailScreen với đầy đủ thông tin', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      fakeService.mockFunds = [
-        {
-          'id': 'fund_dl',
-          'name': 'Quỹ du lịch Đà Lạt',
-          'fundType': 'Tích lũy',
-          'currentAmount': 2000000,
-          'targetAmount': 10000000,
-          'completionDate': '2026-12-31T00:00:00.000Z',
-        },
-      ];
+    testWidgets(
+      'Xem chi tiết quỹ: từ FundsScreen bấm vào quỹ sẽ mở giao diện riêng FundDetailScreen với đầy đủ thông tin',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockFunds = [
+          {
+            'id': 'fund_dl',
+            'name': 'Quỹ du lịch Đà Lạt',
+            'fundType': 'Tích lũy',
+            'currentAmount': 2000000,
+            'targetAmount': 10000000,
+            'completionDate': '2026-12-31T00:00:00.000Z',
+          },
+        ];
 
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
 
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: FundsScreen(),
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: FundsScreen()),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Bấm vào quỹ trong danh sách
-      await tester.tap(find.text('Quỹ du lịch Đà Lạt'));
-      await tester.pumpAndSettle();
+        // Bấm vào quỹ trong danh sách
+        await tester.tap(find.text('Quỹ du lịch Đà Lạt'));
+        await tester.pumpAndSettle();
 
-      // Màn hình chi tiết quỹ riêng biệt được hiển thị
-      expect(find.byType(FundDetailScreen), findsOneWidget);
-      expect(find.text('Chi tiết quỹ'), findsOneWidget);
-      expect(find.text('Quỹ du lịch Đà Lạt'), findsOneWidget);
-      expect(find.text('Tích lũy'), findsOneWidget);
-      expect(find.text('2.000.000 đ'), findsOneWidget);
-      expect(find.text('Mục tiêu: 10.000.000 đ'), findsOneWidget);
-      expect(find.text('20.0%'), findsOneWidget);
-      expect(find.text('Còn thiếu: 8.000.000 đ'), findsOneWidget);
-      expect(find.text('Lịch sử đóng góp'), findsOneWidget);
+        // Màn hình chi tiết quỹ riêng biệt được hiển thị
+        expect(find.byType(FundDetailScreen), findsOneWidget);
+        expect(find.text('Chi tiết quỹ'), findsOneWidget);
+        expect(find.text('Quỹ du lịch Đà Lạt'), findsOneWidget);
+        expect(find.text('Tích lũy'), findsOneWidget);
+        expect(find.text('2.000.000 đ'), findsOneWidget);
+        expect(find.text('Mục tiêu: 10.000.000 đ'), findsOneWidget);
+        expect(find.text('20.0%'), findsOneWidget);
+        expect(find.text('Còn thiếu: 8.000.000 đ'), findsOneWidget);
+        expect(find.text('Lịch sử đóng góp'), findsOneWidget);
 
-      // Nút + Góp quỹ hiển thị
-      expect(find.widgetWithText(AppButton, '+ Góp quỹ'), findsOneWidget);
+        // Nút + Góp quỹ hiển thị
+        expect(find.widgetWithText(AppButton, '+ Góp quỹ'), findsOneWidget);
 
-      // Bấm + Góp quỹ mở giao diện Góp quỹ
-      await tapButton(tester, '+ Góp quỹ');
-      await tester.pumpAndSettle();
+        // Bấm + Góp quỹ mở giao diện Góp quỹ
+        await tapButton(tester, '+ Góp quỹ');
+        await tester.pumpAndSettle();
 
-      expect(find.byType(ContributeFundScreen), findsOneWidget);
-      expect(find.text('Góp tiền vào quỹ'), findsOneWidget);
-    });
+        expect(find.byType(ContributeFundScreen), findsOneWidget);
+        expect(find.text('Góp tiền vào quỹ'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Use Case 05: E1: Để trống số tiền góp hiển thị "Vui lòng nhập số tiền muốn góp"', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
+    testWidgets(
+      'Use Case 05: E1: Để trống số tiền góp hiển thị "Vui lòng nhập số tiền muốn góp"',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
 
-      final fund = {
-        'id': 'fund_1',
-        'name': 'Quỹ du lịch',
-        'fundType': 'Cá nhân',
-        'currentAmount': 100000,
-      };
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: MaterialApp(
-            home: ContributeFundScreen(fund: fund, initialWalletBalance: 1000000),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Bấm Chuyển tiền khi chưa nhập số tiền
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Vui lòng nhập số tiền muốn góp'), findsOneWidget);
-    });
-
-    testWidgets('Use Case 05: E2 & Giá trị biên: Nhập 999đ (< 1.000đ) hiển thị "Tối thiểu 1000đ"', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      final fund = {
-        'id': 'fund_1',
-        'name': 'Quỹ du lịch',
-        'fundType': 'Cá nhân',
-        'currentAmount': 100000,
-      };
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: MaterialApp(
-            home: ContributeFundScreen(fund: fund, initialWalletBalance: 1000000),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Nhập 999 (biên không hợp lệ)
-      await tester.enterText(find.byType(TextFormField).first, '999');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Tối thiểu 1000đ'), findsOneWidget);
-    });
-
-    testWidgets('Use Case 05: E3: Nhập số tiền không phải là số hoặc chứa ký tự không hợp lệ hiển thị "Số tiền không hợp lệ"', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      final fund = {
-        'id': 'fund_1',
-        'name': 'Quỹ du lịch',
-        'fundType': 'Cá nhân',
-        'currentAmount': 100000,
-      };
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: MaterialApp(
-            home: ContributeFundScreen(fund: fund, initialWalletBalance: 1000000),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Nhập "abc"
-      await tester.enterText(find.byType(TextFormField).first, 'abc');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Số tiền không hợp lệ'), findsOneWidget);
-
-      // Nhập "10abc"
-      await tester.enterText(find.byType(TextFormField).first, '10abc');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Số tiền không hợp lệ'), findsOneWidget);
-    });
-
-    testWidgets('Use Case 05: E4 & Giá trị biên: Nhập lớn hơn số dư khả dụng (1.000.001đ khi số dư 1.000.000đ) hiển thị "Số dư ví không đủ để thực hiện giao dịch"', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      final fund = {
-        'id': 'fund_1',
-        'name': 'Quỹ du lịch',
-        'fundType': 'Cá nhân',
-        'currentAmount': 100000,
-      };
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: MaterialApp(
-            home: ContributeFundScreen(fund: fund, initialWalletBalance: 1000000),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Số dư là 1.000.000đ, nhập số dư + 1đ = 1.000.001đ
-      await tester.enterText(find.byType(TextFormField).first, '1000001');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Số dư ví không đủ để thực hiện giao dịch'), findsOneWidget);
-    });
-
-    testWidgets('Use Case 05: E5: Nhập ghi chú quá 200 từ hiển thị "Tối đa 200 từ"', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      final fund = {
-        'id': 'fund_1',
-        'name': 'Quỹ du lịch',
-        'fundType': 'Cá nhân',
-        'currentAmount': 100000,
-      };
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: MaterialApp(
-            home: ContributeFundScreen(fund: fund, initialWalletBalance: 1000000),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextFormField).first, '50000');
-
-      // Nhập 201 từ vào ô ghi chú
-      final longNote = List.generate(201, (i) => 'tu$i').join(' ');
-      await tester.enterText(find.byType(TextFormField).at(1), longNote);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Tối đa 200 từ'), findsOneWidget);
-      expect(find.text('201/200 từ'), findsOneWidget);
-
-      // Bấm Chuyển tiền không mở dialog xác nhận
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Xác nhận chuyển tiền'), findsNothing);
-    });
-
-    testWidgets('Use Case 05: 6.1: Người dùng không xác nhận chuyển tiền (chọn Huỷ giao dịch) thì hệ thống huỷ giao dịch và quay lại giao diện Góp quỹ', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      final fund = {
-        'id': 'fund_1',
-        'name': 'Quỹ du lịch',
-        'fundType': 'Cá nhân',
-        'currentAmount': 100000,
-      };
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: MaterialApp(
-            home: ContributeFundScreen(fund: fund, initialWalletBalance: 1000000),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Nhập số tiền hợp lệ
-      await tester.enterText(find.byType(TextFormField).first, '50000');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
-
-      // Kiểm tra giao diện Chuyển tiền xuất hiện
-      expect(find.text('Chuyển tiền'), findsWidgets);
-      expect(find.text('Xác nhận chuyển tiền'), findsOneWidget);
-      expect(find.text('50.000 đ'), findsWidgets);
-      expect(find.text('Huỷ giao dịch'), findsOneWidget);
-
-      // Bấm Huỷ giao dịch (6.1)
-      await tester.tap(find.text('Huỷ giao dịch'));
-      await tester.pumpAndSettle();
-
-      // Quay lại giao diện Góp quỹ, số dư không đổi
-      expect(find.text('Xác nhận chuyển tiền'), findsNothing);
-      expect(fakeService.mockWalletBalance, equals(1000000));
-    });
-
-    testWidgets('Use Case 05: Luồng thành công Miền 1: Góp tiền thành công và hiển thị thông báo "Góp tiền thành công"', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      fakeService.mockFunds = [
-        {
+        final fund = {
           'id': 'fund_1',
           'name': 'Quỹ du lịch',
           'fundType': 'Cá nhân',
           'currentAmount': 100000,
-        },
-      ];
+        };
 
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: MaterialApp(
-            home: ContributeFundScreen(
-              fund: fakeService.mockFunds.first,
-              initialWalletBalance: 1000000,
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: ContributeFundScreen(
+                fund: fund,
+                initialWalletBalance: 1000000,
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Nhập số tiền hợp lệ 50.000đ và ghi chú hợp lệ
-      await tester.enterText(find.byType(TextFormField).first, '50000');
-      await tester.enterText(find.byType(TextFormField).at(1), 'Góp tiền tháng 9');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
+        // Bấm Chuyển tiền khi chưa nhập số tiền
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
 
-      // Giao diện Chuyển tiền hiển thị thông tin
-      expect(find.text('Xác nhận chuyển tiền'), findsOneWidget);
-      expect(find.text('Góp tiền tháng 9'), findsWidgets);
+        expect(find.text('Vui lòng nhập số tiền muốn góp'), findsOneWidget);
+      },
+    );
 
-      // Bấm Xác nhận chuyển tiền
-      await tapButton(tester, 'Xác nhận chuyển tiền');
-      await tester.pumpAndSettle();
+    testWidgets(
+      'Use Case 05: E2 & Giá trị biên: Nhập 999đ (< 1.000đ) hiển thị "Tối thiểu 1000đ"',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
 
-      // Hệ thống thông báo "Góp tiền thành công"
-      expect(find.text('Góp tiền thành công'), findsOneWidget);
-      // Số dư ví bị trừ 50.000đ
-      expect(fakeService.mockWalletBalance, equals(950000));
-      // Số tiền quỹ tăng 50.000đ
-      expect(fakeService.mockFunds.first['currentAmount'], equals(150000));
-      // Lưu giao dịch
-      expect(fakeService.mockFundTransactions.length, equals(1));
-    });
-
-    testWidgets('Use Case 05: Giá trị biên: Góp đúng bằng số dư khả dụng (1.000.000đ) thành công', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      fakeService.mockFunds = [
-        {
+        final fund = {
           'id': 'fund_1',
-          'name': 'Quỹ dự phòng',
+          'name': 'Quỹ du lịch',
           'fundType': 'Cá nhân',
-          'currentAmount': 0,
-        },
-      ];
+          'currentAmount': 100000,
+        };
 
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: MaterialApp(
-            home: ContributeFundScreen(
-              fund: fakeService.mockFunds.first,
-              initialWalletBalance: 1000000,
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: ContributeFundScreen(
+                fund: fund,
+                initialWalletBalance: 1000000,
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Nhập số tiền = số dư ví: 1000000
-      await tester.enterText(find.byType(TextFormField).first, '1000000');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
+        // Nhập 999 (biên không hợp lệ)
+        await tester.enterText(find.byType(TextFormField).first, '999');
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
 
-      // Bấm Xác nhận chuyển tiền
-      await tapButton(tester, 'Xác nhận chuyển tiền');
-      await tester.pumpAndSettle();
+        expect(find.text('Tối thiểu 1000đ'), findsOneWidget);
+      },
+    );
 
-      expect(find.text('Góp tiền thành công'), findsOneWidget);
-      expect(fakeService.mockWalletBalance, equals(0));
-      expect(fakeService.mockFunds.first['currentAmount'], equals(1000000));
-    });
+    testWidgets(
+      'Use Case 05: E3: Nhập số tiền không phải là số hoặc chứa ký tự không hợp lệ hiển thị "Số tiền không hợp lệ"',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
 
-    testWidgets('Use Case 05: E6: Phát sinh lỗi khi chuyển tiền hiển thị "Góp quỹ không thành công"', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      fakeService.shouldFailContribute = true;
-
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      final fund = {
-        'id': 'fund_1',
-        'name': 'Quỹ du lịch',
-        'fundType': 'Cá nhân',
-        'currentAmount': 100000,
-      };
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: MaterialApp(
-            home: ContributeFundScreen(fund: fund, initialWalletBalance: 1000000),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextFormField).first, '50000');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
-
-      await tapButton(tester, 'Xác nhận chuyển tiền');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Góp quỹ không thành công'), findsOneWidget);
-    });
-
-    testWidgets('Use Case 05: E7: Lỗi kết nối mạng hiển thị "Không thể thực hiện giao dịch. Vui lòng thử lại sau"', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      fakeService.shouldNetworkFailContribute = true;
-
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      final fund = {
-        'id': 'fund_1',
-        'name': 'Quỹ du lịch',
-        'fundType': 'Cá nhân',
-        'currentAmount': 100000,
-      };
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: MaterialApp(
-            home: ContributeFundScreen(fund: fund, initialWalletBalance: 1000000),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextFormField).first, '50000');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
-
-      await tapButton(tester, 'Xác nhận chuyển tiền');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Không thể thực hiện giao dịch. Vui lòng thử lại sau'), findsOneWidget);
-    });
-
-    testWidgets('Luồng tích hợp hoàn chỉnh: Từ Quỹ -> Chi tiết quỹ -> Góp quỹ -> Cập nhật số tiền', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      fakeService.mockFunds = [
-        {
-          'id': 'fund_100',
-          'name': 'Quỹ mua laptop mới',
-          'fundType': 'Tích lũy',
-          'currentAmount': 5000000,
-          'targetAmount': 20000000,
-        },
-      ];
-
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: FundsScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Bấm vào quỹ để mở Chi tiết quỹ
-      await tester.tap(find.text('Quỹ mua laptop mới'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(FundDetailScreen), findsOneWidget);
-      expect(find.text('5.000.000 đ'), findsOneWidget);
-
-      // Bấm + Góp quỹ
-      await tapButton(tester, '+ Góp quỹ');
-      await tester.pumpAndSettle();
-
-      expect(find.byType(ContributeFundScreen), findsOneWidget);
-
-      // Nhập 500.000đ
-      await tester.enterText(find.byType(TextFormField).first, '500000');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
-
-      // Xác nhận chuyển tiền
-      await tapButton(tester, 'Xác nhận chuyển tiền');
-      await tester.pumpAndSettle();
-
-      // Thông báo thành công
-      expect(find.text('Góp tiền thành công'), findsOneWidget);
-
-      // Đã quay về Chi tiết quỹ và số tiền hiển thị là 5.500.000 đ
-      expect(find.byType(FundDetailScreen), findsOneWidget);
-      expect(find.text('5.500.000 đ'), findsOneWidget);
-    });
-
-    testWidgets('Góp quỹ thành công: Số dư ví cá nhân bị trừ thật trên giao diện HomeScreen và AppSession', (tester) async {
-      final fakeService = FakeAuthService(acceptedPassword: '123456');
-      fakeService.mockWalletBalance = 1000000;
-      fakeService.mockFunds = [
-        {
-          'id': 'fund_abc',
-          'name': 'Quỹ du lịch Đà Lạt',
-          'fundType': 'Tiết kiệm',
+        final fund = {
+          'id': 'fund_1',
+          'name': 'Quỹ du lịch',
+          'fundType': 'Cá nhân',
           'currentAmount': 100000,
-          'targetAmount': 5000000,
-        },
-      ];
+        };
 
-      final session = AppSession(authService: fakeService);
-      await session.login(account: 'admin', password: '123456');
-
-      await tester.pumpWidget(
-        AppScope(
-          session: session,
-          child: const MaterialApp(
-            home: HomeScreen(),
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: ContributeFundScreen(
+                fund: fund,
+                initialWalletBalance: 1000000,
+              ),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Kiểm tra ban đầu HomeScreen hiển thị 1.000.000 đ
-      expect(find.text('1.000.000 đ'), findsOneWidget);
+        // Nhập "abc"
+        await tester.enterText(find.byType(TextFormField).first, 'abc');
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
 
-      // Bấm vào nút "Quỹ" ở Trang chủ
-      await tester.tap(find.text('Quỹ'));
-      await tester.pumpAndSettle();
+        expect(find.text('Số tiền không hợp lệ'), findsOneWidget);
 
-      expect(find.byType(FundsScreen), findsOneWidget);
+        // Nhập "10abc"
+        await tester.enterText(find.byType(TextFormField).first, '10abc');
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
 
-      // Bấm vào quỹ "Quỹ du lịch Đà Lạt" để mở Chi tiết quỹ
-      await tester.tap(find.text('Quỹ du lịch Đà Lạt'));
-      await tester.pumpAndSettle();
+        expect(find.text('Số tiền không hợp lệ'), findsOneWidget);
+      },
+    );
 
-      expect(find.byType(FundDetailScreen), findsOneWidget);
+    testWidgets(
+      'Use Case 05: E4 & Giá trị biên: Nhập lớn hơn số dư khả dụng (1.000.001đ khi số dư 1.000.000đ) hiển thị "Số dư ví không đủ để thực hiện giao dịch"',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
 
-      // Bấm "+ Góp quỹ"
-      await tapButton(tester, '+ Góp quỹ');
-      await tester.pumpAndSettle();
+        final fund = {
+          'id': 'fund_1',
+          'name': 'Quỹ du lịch',
+          'fundType': 'Cá nhân',
+          'currentAmount': 100000,
+        };
 
-      expect(find.byType(ContributeFundScreen), findsOneWidget);
-      expect(find.text('Số dư ví khả dụng: '), findsOneWidget);
-      expect(find.text('1.000.000 đ'), findsWidgets);
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: ContributeFundScreen(
+                fund: fund,
+                initialWalletBalance: 1000000,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Nhập số tiền góp: 200.000 đ
-      await tester.enterText(find.byType(TextFormField).first, '200000');
-      await tapButton(tester, 'Chuyển tiền');
-      await tester.pumpAndSettle();
+        // Số dư là 1.000.000đ, nhập số dư + 1đ = 1.000.001đ
+        await tester.enterText(find.byType(TextFormField).first, '1000001');
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
 
-      // Kiểm tra sheet Chuyển tiền hiển thị số tiền trừ và số dư còn lại sau chuyển (800.000 đ)
-      expect(find.text('Xác nhận chuyển tiền'), findsOneWidget);
-      expect(find.text('800.000 đ'), findsOneWidget);
+        expect(
+          find.text('Số dư ví không đủ để thực hiện giao dịch'),
+          findsOneWidget,
+        );
+      },
+    );
 
-      // Xác nhận chuyển tiền
-      await tapButton(tester, 'Xác nhận chuyển tiền');
-      await tester.pumpAndSettle();
+    testWidgets(
+      'Use Case 05: E5: Nhập ghi chú quá 200 từ hiển thị "Tối đa 200 từ"',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
 
-      // Thông báo thành công
-      expect(find.text('Góp tiền thành công'), findsOneWidget);
+        final fund = {
+          'id': 'fund_1',
+          'name': 'Quỹ du lịch',
+          'fundType': 'Cá nhân',
+          'currentAmount': 100000,
+        };
 
-      // Đã quay về Chi tiết quỹ, quỹ tăng lên 300.000 đ (100.000 + 200.000)
-      expect(find.byType(FundDetailScreen), findsOneWidget);
-      expect(find.text('300.000 đ'), findsOneWidget);
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: ContributeFundScreen(
+                fund: fund,
+                initialWalletBalance: 1000000,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Bấm quay về Danh sách quỹ
-      await tester.tap(find.text('Danh sách quỹ'));
-      await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextFormField).first, '50000');
 
-      expect(find.byType(FundsScreen), findsOneWidget);
+        // Nhập 201 từ vào ô ghi chú
+        final longNote = List.generate(201, (i) => 'tu$i').join(' ');
+        await tester.enterText(find.byType(TextFormField).at(1), longNote);
+        await tester.pumpAndSettle();
 
-      // Bấm quay về Trang chủ
-      await tester.tap(find.text('Trang chủ'));
-      await tester.pumpAndSettle();
+        expect(find.text('Tối đa 200 từ'), findsOneWidget);
+        expect(find.text('201/200 từ'), findsOneWidget);
 
-      // Đã về HomeScreen
-      expect(find.byType(HomeScreen), findsOneWidget);
+        // Bấm Chuyển tiền không mở dialog xác nhận
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
 
-      // SỐ DƯ ĐÃ BỊ GIẢM THẬT: Từ 1.000.000 đ giảm còn 800.000 đ
-      expect(find.text('800.000 đ'), findsOneWidget);
-      expect(find.text('1.000.000 đ'), findsNothing);
+        expect(find.text('Xác nhận chuyển tiền'), findsNothing);
+      },
+    );
 
-      // Xác minh số dư trong session và mock service cũng bị giảm về 800.000
-      expect(session.user?.walletBalance, 800000.0);
-      expect(fakeService.mockWalletBalance, 800000.0);
-    });
+    testWidgets(
+      'Use Case 05: 6.1: Người dùng không xác nhận chuyển tiền (chọn Huỷ giao dịch) thì hệ thống huỷ giao dịch và quay lại giao diện Góp quỹ',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final fund = {
+          'id': 'fund_1',
+          'name': 'Quỹ du lịch',
+          'fundType': 'Cá nhân',
+          'currentAmount': 100000,
+        };
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: ContributeFundScreen(
+                fund: fund,
+                initialWalletBalance: 1000000,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Nhập số tiền hợp lệ
+        await tester.enterText(find.byType(TextFormField).first, '50000');
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
+
+        // Kiểm tra giao diện Chuyển tiền xuất hiện
+        expect(find.text('Chuyển tiền'), findsWidgets);
+        expect(find.text('Xác nhận chuyển tiền'), findsOneWidget);
+        expect(find.text('50.000 đ'), findsWidgets);
+        expect(find.text('Huỷ giao dịch'), findsOneWidget);
+
+        // Bấm Huỷ giao dịch (6.1)
+        await tester.tap(find.text('Huỷ giao dịch'));
+        await tester.pumpAndSettle();
+
+        // Quay lại giao diện Góp quỹ, số dư không đổi
+        expect(find.text('Xác nhận chuyển tiền'), findsNothing);
+        expect(fakeService.mockWalletBalance, equals(1000000));
+      },
+    );
+
+    testWidgets(
+      'Use Case 05: Luồng thành công Miền 1: Góp tiền thành công và hiển thị thông báo "Góp tiền thành công"',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockFunds = [
+          {
+            'id': 'fund_1',
+            'name': 'Quỹ du lịch',
+            'fundType': 'Cá nhân',
+            'currentAmount': 100000,
+          },
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: ContributeFundScreen(
+                fund: fakeService.mockFunds.first,
+                initialWalletBalance: 1000000,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Nhập số tiền hợp lệ 50.000đ và ghi chú hợp lệ
+        await tester.enterText(find.byType(TextFormField).first, '50000');
+        await tester.enterText(
+          find.byType(TextFormField).at(1),
+          'Góp tiền tháng 9',
+        );
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
+
+        // Giao diện Chuyển tiền hiển thị thông tin
+        expect(find.text('Xác nhận chuyển tiền'), findsOneWidget);
+        expect(find.text('Góp tiền tháng 9'), findsWidgets);
+
+        // Bấm Xác nhận chuyển tiền
+        await tapButton(tester, 'Xác nhận chuyển tiền');
+        await tester.pumpAndSettle();
+
+        // Hệ thống thông báo "Góp tiền thành công"
+        expect(find.text('Góp tiền thành công'), findsOneWidget);
+        // Số dư ví bị trừ 50.000đ
+        expect(fakeService.mockWalletBalance, equals(950000));
+        // Số tiền quỹ tăng 50.000đ
+        expect(fakeService.mockFunds.first['currentAmount'], equals(150000));
+        // Lưu giao dịch
+        expect(fakeService.mockFundTransactions.length, equals(1));
+      },
+    );
+
+    testWidgets(
+      'Use Case 05: Giá trị biên: Góp đúng bằng số dư khả dụng (1.000.000đ) thành công',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockFunds = [
+          {
+            'id': 'fund_1',
+            'name': 'Quỹ dự phòng',
+            'fundType': 'Cá nhân',
+            'currentAmount': 0,
+          },
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: ContributeFundScreen(
+                fund: fakeService.mockFunds.first,
+                initialWalletBalance: 1000000,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Nhập số tiền = số dư ví: 1000000
+        await tester.enterText(find.byType(TextFormField).first, '1000000');
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
+
+        // Bấm Xác nhận chuyển tiền
+        await tapButton(tester, 'Xác nhận chuyển tiền');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Góp tiền thành công'), findsOneWidget);
+        expect(fakeService.mockWalletBalance, equals(0));
+        expect(fakeService.mockFunds.first['currentAmount'], equals(1000000));
+      },
+    );
+
+    testWidgets(
+      'Use Case 05: E6: Phát sinh lỗi khi chuyển tiền hiển thị "Góp quỹ không thành công"',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.shouldFailContribute = true;
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final fund = {
+          'id': 'fund_1',
+          'name': 'Quỹ du lịch',
+          'fundType': 'Cá nhân',
+          'currentAmount': 100000,
+        };
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: ContributeFundScreen(
+                fund: fund,
+                initialWalletBalance: 1000000,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField).first, '50000');
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Xác nhận chuyển tiền');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Góp quỹ không thành công'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Use Case 05: E7: Lỗi kết nối mạng hiển thị "Không thể thực hiện giao dịch. Vui lòng thử lại sau"',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.shouldNetworkFailContribute = true;
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final fund = {
+          'id': 'fund_1',
+          'name': 'Quỹ du lịch',
+          'fundType': 'Cá nhân',
+          'currentAmount': 100000,
+        };
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: ContributeFundScreen(
+                fund: fund,
+                initialWalletBalance: 1000000,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField).first, '50000');
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Xác nhận chuyển tiền');
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Không thể thực hiện giao dịch. Vui lòng thử lại sau'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'Luồng tích hợp hoàn chỉnh: Từ Quỹ -> Chi tiết quỹ -> Góp quỹ -> Cập nhật số tiền',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockFunds = [
+          {
+            'id': 'fund_100',
+            'name': 'Quỹ mua laptop mới',
+            'fundType': 'Tích lũy',
+            'currentAmount': 5000000,
+            'targetAmount': 20000000,
+          },
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: FundsScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Bấm vào quỹ để mở Chi tiết quỹ
+        await tester.tap(find.text('Quỹ mua laptop mới'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FundDetailScreen), findsOneWidget);
+        expect(find.text('5.000.000 đ'), findsOneWidget);
+
+        // Bấm + Góp quỹ
+        await tapButton(tester, '+ Góp quỹ');
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ContributeFundScreen), findsOneWidget);
+
+        // Nhập 500.000đ
+        await tester.enterText(find.byType(TextFormField).first, '500000');
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
+
+        // Xác nhận chuyển tiền
+        await tapButton(tester, 'Xác nhận chuyển tiền');
+        await tester.pumpAndSettle();
+
+        // Thông báo thành công
+        expect(find.text('Góp tiền thành công'), findsOneWidget);
+
+        // Đã quay về Chi tiết quỹ và số tiền hiển thị là 5.500.000 đ
+        expect(find.byType(FundDetailScreen), findsOneWidget);
+        expect(find.text('5.500.000 đ'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Góp quỹ thành công: Số dư ví cá nhân bị trừ thật trên giao diện HomeScreen và AppSession',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockWalletBalance = 1000000;
+        fakeService.mockFunds = [
+          {
+            'id': 'fund_abc',
+            'name': 'Quỹ du lịch Đà Lạt',
+            'fundType': 'Tiết kiệm',
+            'currentAmount': 100000,
+            'targetAmount': 5000000,
+          },
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: HomeScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Kiểm tra ban đầu HomeScreen hiển thị 1.000.000 đ
+        expect(find.text('1.000.000 đ'), findsOneWidget);
+
+        // Bấm vào nút "Quỹ" ở Trang chủ
+        await tester.tap(find.text('Quỹ'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FundsScreen), findsOneWidget);
+
+        // Bấm vào quỹ "Quỹ du lịch Đà Lạt" để mở Chi tiết quỹ
+        await tester.tap(find.text('Quỹ du lịch Đà Lạt'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FundDetailScreen), findsOneWidget);
+
+        // Bấm "+ Góp quỹ"
+        await tapButton(tester, '+ Góp quỹ');
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ContributeFundScreen), findsOneWidget);
+        expect(find.text('Số dư ví khả dụng: '), findsOneWidget);
+        expect(find.text('1.000.000 đ'), findsWidgets);
+
+        // Nhập số tiền góp: 200.000 đ
+        await tester.enterText(find.byType(TextFormField).first, '200000');
+        await tapButton(tester, 'Chuyển tiền');
+        await tester.pumpAndSettle();
+
+        // Kiểm tra sheet Chuyển tiền hiển thị số tiền trừ và số dư còn lại sau chuyển (800.000 đ)
+        expect(find.text('Xác nhận chuyển tiền'), findsOneWidget);
+        expect(find.text('800.000 đ'), findsOneWidget);
+
+        // Xác nhận chuyển tiền
+        await tapButton(tester, 'Xác nhận chuyển tiền');
+        await tester.pumpAndSettle();
+
+        // Thông báo thành công
+        expect(find.text('Góp tiền thành công'), findsOneWidget);
+
+        // Đã quay về Chi tiết quỹ, quỹ tăng lên 300.000 đ (100.000 + 200.000)
+        expect(find.byType(FundDetailScreen), findsOneWidget);
+        expect(find.text('300.000 đ'), findsOneWidget);
+
+        // Bấm quay về Danh sách quỹ
+        await tester.tap(find.text('Danh sách quỹ'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FundsScreen), findsOneWidget);
+
+        // Bấm quay về Trang chủ
+        await tester.tap(find.text('Trang chủ'));
+        await tester.pumpAndSettle();
+
+        // Đã về HomeScreen
+        expect(find.byType(HomeScreen), findsOneWidget);
+
+        // SỐ DƯ ĐÃ BỊ GIẢM THẬT: Từ 1.000.000 đ giảm còn 800.000 đ
+        expect(find.text('800.000 đ'), findsOneWidget);
+        expect(find.text('1.000.000 đ'), findsNothing);
+
+        // Xác minh số dư trong session và mock service cũng bị giảm về 800.000
+        expect(session.user?.walletBalance, 800000.0);
+        expect(fakeService.mockWalletBalance, 800000.0);
+      },
+    );
   });
 
   group('Chức năng Mời thành viên & Thông báo lời mời quỹ (Use Case 06)', () {
-      testWidgets('Trang chủ: Nút hình chuông bên cạnh avatar và hiển thị chấm đỏ khi có thông báo mới', (tester) async {
+    testWidgets(
+      'Trang chủ: Nút hình chuông bên cạnh avatar và hiển thị chấm đỏ khi có thông báo mới',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         fakeService.mockNotificationsList = [
           {
@@ -1863,7 +2075,7 @@ void main() {
             'isRead': false,
             'createdAt': DateTime.now().toIso8601String(),
             'metadata': {'invitationId': 'inv_10'},
-          }
+          },
         ];
 
         final session = AppSession(authService: fakeService);
@@ -1872,9 +2084,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: const MaterialApp(
-              home: HomeScreen(),
-            ),
+            child: const MaterialApp(home: HomeScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -1891,10 +2101,16 @@ void main() {
         expect(find.byType(NotificationsSheet), findsOneWidget);
         expect(find.text('Thông báo'), findsWidgets);
         expect(find.text('Lời mời tham gia quỹ'), findsOneWidget);
-        expect(find.text('Đào Ngọc Đình đã mời bạn tham gia quỹ "Quỹ Hội Nhóm"'), findsOneWidget);
-      });
+        expect(
+          find.text('Đào Ngọc Đình đã mời bạn tham gia quỹ "Quỹ Hội Nhóm"'),
+          findsOneWidget,
+        );
+      },
+    );
 
-      testWidgets('Thông báo: Khi bấm vào lời mời quỹ sẽ chuyển sang giao diện kiểm tra lời mời hiện có (FundInvitationsScreen)', (tester) async {
+    testWidgets(
+      'Thông báo: Khi bấm vào lời mời quỹ sẽ chuyển sang giao diện kiểm tra lời mời hiện có (FundInvitationsScreen)',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         fakeService.mockNotificationsList = [
           {
@@ -1906,7 +2122,7 @@ void main() {
             'isRead': false,
             'createdAt': DateTime.now().toIso8601String(),
             'metadata': {'invitationId': 'inv_10'},
-          }
+          },
         ];
         fakeService.mockInvitations = [
           {
@@ -1918,7 +2134,7 @@ void main() {
             'inviterName': 'Đào Ngọc Đình',
             'status': 'pending',
             'createdAt': DateTime.now().toIso8601String(),
-          }
+          },
         ];
 
         final session = AppSession(authService: fakeService);
@@ -1927,9 +2143,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: const MaterialApp(
-              home: HomeScreen(),
-            ),
+            child: const MaterialApp(home: HomeScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -1945,12 +2159,18 @@ void main() {
         // Chuyển sang FundInvitationsScreen
         expect(find.byType(FundInvitationsScreen), findsOneWidget);
         expect(find.text('Quỹ Du Lịch Hè'), findsOneWidget);
-        expect(find.text('Đào Ngọc Đình đã mời bạn tham gia quỹ này'), findsOneWidget);
+        expect(
+          find.text('Đào Ngọc Đình đã mời bạn tham gia quỹ này'),
+          findsOneWidget,
+        );
         expect(find.text('Đồng ý'), findsOneWidget);
         expect(find.text('Từ chối'), findsOneWidget);
-      });
+      },
+    );
 
-      testWidgets('Kiểm tra lời mời hiện có (FundInvitationsScreen): Đồng ý tham gia quỹ', (tester) async {
+    testWidgets(
+      'Kiểm tra lời mời hiện có (FundInvitationsScreen): Đồng ý tham gia quỹ',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         fakeService.mockInvitations = [
           {
@@ -1962,7 +2182,7 @@ void main() {
             'inviterName': 'Đào Ngọc Đình',
             'status': 'pending',
             'createdAt': DateTime.now().toIso8601String(),
-          }
+          },
         ];
 
         final session = AppSession(authService: fakeService);
@@ -1971,9 +2191,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: const MaterialApp(
-              home: FundInvitationsScreen(),
-            ),
+            child: const MaterialApp(home: FundInvitationsScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -1988,9 +2206,12 @@ void main() {
         expect(find.text('Tham gia quỹ thành công'), findsOneWidget);
         expect(find.text('Đã tham gia'), findsOneWidget);
         expect(fakeService.mockInvitations.first['status'], 'accepted');
-      });
+      },
+    );
 
-      testWidgets('Kiểm tra lời mời hiện có (FundInvitationsScreen): Từ chối lời mời', (tester) async {
+    testWidgets(
+      'Kiểm tra lời mời hiện có (FundInvitationsScreen): Từ chối lời mời',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         fakeService.mockInvitations = [
           {
@@ -2002,7 +2223,7 @@ void main() {
             'inviterName': 'Nguyễn Văn A',
             'status': 'pending',
             'createdAt': DateTime.now().toIso8601String(),
-          }
+          },
         ];
 
         final session = AppSession(authService: fakeService);
@@ -2011,9 +2232,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: const MaterialApp(
-              home: FundInvitationsScreen(),
-            ),
+            child: const MaterialApp(home: FundInvitationsScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -2024,7 +2243,12 @@ void main() {
 
         // Xuất hiện dialog xác nhận từ chối
         expect(find.text('Từ chối lời mời'), findsWidgets);
-        expect(find.text('Bạn có chắc chắn muốn từ chối lời mời tham gia quỹ "Quỹ Hội Nhóm" không?'), findsOneWidget);
+        expect(
+          find.text(
+            'Bạn có chắc chắn muốn từ chối lời mời tham gia quỹ "Quỹ Hội Nhóm" không?',
+          ),
+          findsOneWidget,
+        );
 
         // Xác nhận từ chối trong dialog
         await tester.tap(find.widgetWithText(ElevatedButton, 'Từ chối'));
@@ -2033,9 +2257,12 @@ void main() {
         expect(find.text('Đã từ chối lời mời'), findsOneWidget);
         expect(find.text('Đã từ chối'), findsOneWidget);
         expect(fakeService.mockInvitations.first['status'], 'rejected');
-      });
+      },
+    );
 
-      testWidgets('Chi tiết quỹ: Quỹ không phải cá nhân có nút "Mời thành viên", bấm vào mở giao diện riêng InviteMemberScreen', (tester) async {
+    testWidgets(
+      'Chi tiết quỹ: Quỹ không phải cá nhân có nút "Mời thành viên", bấm vào mở giao diện riêng InviteMemberScreen',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         final session = AppSession(authService: fakeService);
         await session.login(account: 'admin', password: '123456');
@@ -2052,9 +2279,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: MaterialApp(
-              home: FundDetailScreen(fund: groupFund),
-            ),
+            child: MaterialApp(home: FundDetailScreen(fund: groupFund)),
           ),
         );
         await tester.pumpAndSettle();
@@ -2070,9 +2295,12 @@ void main() {
         // Mở giao diện riêng InviteMemberScreen
         expect(find.byType(InviteMemberScreen), findsOneWidget);
         expect(find.text('Quỹ: Quỹ Hội Nhóm Phượt'), findsOneWidget);
-      });
+      },
+    );
 
-      testWidgets('Use Case 06: Ngoại lệ 1.2 / E2: Quỹ cá nhân ấn Mời thành viên báo "Quỹ cá nhân không thể mời thành viên"', (tester) async {
+    testWidgets(
+      'Use Case 06: Ngoại lệ 1.2 / E2: Quỹ cá nhân ấn Mời thành viên báo "Quỹ cá nhân không thể mời thành viên"',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         final session = AppSession(authService: fakeService);
         await session.login(account: 'admin', password: '123456');
@@ -2088,9 +2316,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: MaterialApp(
-              home: FundDetailScreen(fund: personalFund),
-            ),
+            child: MaterialApp(home: FundDetailScreen(fund: personalFund)),
           ),
         );
         await tester.pumpAndSettle();
@@ -2100,10 +2326,16 @@ void main() {
         await tester.pumpAndSettle();
 
         // Thông báo Exception E2
-        expect(find.text('Quỹ cá nhân không thể mời thành viên'), findsOneWidget);
-      });
+        expect(
+          find.text('Quỹ cá nhân không thể mời thành viên'),
+          findsOneWidget,
+        );
+      },
+    );
 
-      testWidgets('Use Case 06: Luồng 4.1 & Gợi ý: Hiển thị danh sách đề xuất người dùng khi mở màn hình', (tester) async {
+    testWidgets(
+      'Use Case 06: Luồng 4.1 & Gợi ý: Hiển thị danh sách đề xuất người dùng khi mở màn hình',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         final session = AppSession(authService: fakeService);
         await session.login(account: 'admin', password: '123456');
@@ -2117,9 +2349,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: MaterialApp(
-              home: InviteMemberScreen(fund: groupFund),
-            ),
+            child: MaterialApp(home: InviteMemberScreen(fund: groupFund)),
           ),
         );
         await tester.pumpAndSettle();
@@ -2138,9 +2368,12 @@ void main() {
 
         // Miền 1: Trần Văn B có nút "Mời"
         expect(find.text('Mời'), findsOneWidget);
-      });
+      },
+    );
 
-      testWidgets('Ẩn admin khỏi danh sách đề xuất: Tài khoản admin không xuất hiện trong danh sách đề xuất ứng viên', (tester) async {
+    testWidgets(
+      'Ẩn admin khỏi danh sách đề xuất: Tài khoản admin không xuất hiện trong danh sách đề xuất ứng viên',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         // Thêm một tài khoản admin vào danh sách mock
         fakeService.mockCandidates = [
@@ -2155,7 +2388,7 @@ void main() {
             'isMember': false,
             'hasPendingInvite': false,
             'canInvite': true,
-          }
+          },
         ];
         final session = AppSession(authService: fakeService);
         await session.login(account: 'user1', password: '123456');
@@ -2169,9 +2402,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: MaterialApp(
-              home: InviteMemberScreen(fund: groupFund),
-            ),
+            child: MaterialApp(home: InviteMemberScreen(fund: groupFund)),
           ),
         );
         await tester.pumpAndSettle();
@@ -2181,9 +2412,12 @@ void main() {
         expect(find.text('Trần Văn B'), findsOneWidget);
         expect(find.text('admin'), findsNothing);
         expect(find.text('admin@gmail.com'), findsNothing);
-      });
+      },
+    );
 
-      testWidgets('Use Case 06: Ngoại lệ 4.2 / E3: Tìm kiếm không có kết quả hiển thị "Không tìm thấy người dùng phù hợp"', (tester) async {
+    testWidgets(
+      'Use Case 06: Ngoại lệ 4.2 / E3: Tìm kiếm không có kết quả hiển thị "Không tìm thấy người dùng phù hợp"',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         final session = AppSession(authService: fakeService);
         await session.login(account: 'admin', password: '123456');
@@ -2197,9 +2431,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: MaterialApp(
-              home: InviteMemberScreen(fund: groupFund),
-            ),
+            child: MaterialApp(home: InviteMemberScreen(fund: groupFund)),
           ),
         );
         await tester.pumpAndSettle();
@@ -2211,9 +2443,12 @@ void main() {
 
         // Hiển thị thông báo E3
         expect(find.text('Không tìm thấy người dùng phù hợp'), findsOneWidget);
-      });
+      },
+    );
 
-      testWidgets('Use Case 06: Luồng con 4.1 & 4.2: Tìm kiếm theo tên hoặc SĐT hiển thị người dùng phù hợp', (tester) async {
+    testWidgets(
+      'Use Case 06: Luồng con 4.1 & 4.2: Tìm kiếm theo tên hoặc SĐT hiển thị người dùng phù hợp',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         final session = AppSession(authService: fakeService);
         await session.login(account: 'admin', password: '123456');
@@ -2227,9 +2462,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: MaterialApp(
-              home: InviteMemberScreen(fund: groupFund),
-            ),
+            child: MaterialApp(home: InviteMemberScreen(fund: groupFund)),
           ),
         );
         await tester.pumpAndSettle();
@@ -2248,9 +2481,12 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Lê Văn D'), findsNothing);
-      });
+      },
+    );
 
-      testWidgets('Use Case 06: Luồng thành công Miền 1: Mời Trần Văn B, hiện hộp thoại xác nhận và thông báo "Gửi lời mời thành công"', (tester) async {
+    testWidgets(
+      'Use Case 06: Luồng thành công Miền 1: Mời Trần Văn B, hiện hộp thoại xác nhận và thông báo "Gửi lời mời thành công"',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         final session = AppSession(authService: fakeService);
         await session.login(account: 'admin', password: '123456');
@@ -2264,9 +2500,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: MaterialApp(
-              home: InviteMemberScreen(fund: groupFund),
-            ),
+            child: MaterialApp(home: InviteMemberScreen(fund: groupFund)),
           ),
         );
         await tester.pumpAndSettle();
@@ -2277,7 +2511,12 @@ void main() {
 
         // Hiện dialog xác nhận
         expect(find.text('Xác nhận lời mời'), findsOneWidget);
-        expect(find.text('Bạn có muốn mời Trần Văn B tham gia vào quỹ "Quỹ Du Lịch Hè" không?'), findsOneWidget);
+        expect(
+          find.text(
+            'Bạn có muốn mời Trần Văn B tham gia vào quỹ "Quỹ Du Lịch Hè" không?',
+          ),
+          findsOneWidget,
+        );
 
         // Bấm Gửi lời mời trong dialog
         await tester.tap(find.text('Gửi lời mời'));
@@ -2287,10 +2526,16 @@ void main() {
         expect(find.text('Gửi lời mời thành công'), findsOneWidget);
 
         // Trần Văn B đổi trạng thái thành "Đã gửi lời mời"
-        expect(find.text('Đã gửi lời mời'), findsNWidgets(2)); // Phạm Văn E + Trần Văn B
-      });
+        expect(
+          find.text('Đã gửi lời mời'),
+          findsNWidgets(2),
+        ); // Phạm Văn E + Trần Văn B
+      },
+    );
 
-      testWidgets('Use Case 06: Ngoại lệ 7.1 / E6: Xảy ra lỗi khi gửi lời mời hiển thị "Gửi lời mời không thành công"', (tester) async {
+    testWidgets(
+      'Use Case 06: Ngoại lệ 7.1 / E6: Xảy ra lỗi khi gửi lời mời hiển thị "Gửi lời mời không thành công"',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         fakeService.shouldFailSendInvite = true;
 
@@ -2306,9 +2551,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: MaterialApp(
-              home: InviteMemberScreen(fund: groupFund),
-            ),
+            child: MaterialApp(home: InviteMemberScreen(fund: groupFund)),
           ),
         );
         await tester.pumpAndSettle();
@@ -2323,11 +2566,14 @@ void main() {
 
         // Thông báo E6
         expect(find.text('Gửi lời mời không thành công'), findsOneWidget);
-      });
-    });
+      },
+    );
+  });
 
-    group('Tính năng Role Admin & Xem danh sách tài khoản', () {
-      testWidgets('Tài khoản admin: HomeScreen hiển thị bảng điều khiển admin và mở màn hình Danh sách tài khoản', (tester) async {
+  group('Tính năng Role Admin & Xem danh sách tài khoản', () {
+    testWidgets(
+      'Tài khoản admin: HomeScreen hiển thị bảng điều khiển admin và mở màn hình Danh sách tài khoản',
+      (tester) async {
         await tester.pumpWidget(buildApp());
         await _login(tester, account: 'admin', password: '123456');
 
@@ -2342,7 +2588,10 @@ void main() {
         final adminBanner = find.text('Bảng điều khiển Quản trị viên');
         await tester.ensureVisible(adminBanner);
         expect(adminBanner, findsOneWidget);
-        expect(find.text('Xem danh sách tài khoản & tra cứu người dùng'), findsOneWidget);
+        expect(
+          find.text('Xem danh sách tài khoản & tra cứu người dùng'),
+          findsOneWidget,
+        );
 
         // Bấm vào banner
         await tester.tap(adminBanner);
@@ -2362,9 +2611,12 @@ void main() {
         await tester.drag(find.byType(ListView), const Offset(0, -150));
         await tester.pumpAndSettle();
         expect(find.text('Trần Thị B'), findsOneWidget);
-      });
+      },
+    );
 
-      testWidgets('Tài khoản admin: bấm nút tính năng DS tài khoản trong lưới mở màn hình AdminUsersScreen', (tester) async {
+    testWidgets(
+      'Tài khoản admin: bấm nút tính năng DS tài khoản trong lưới mở màn hình AdminUsersScreen',
+      (tester) async {
         await tester.pumpWidget(buildApp());
         await _login(tester, account: 'admin', password: '123456');
 
@@ -2378,9 +2630,12 @@ void main() {
 
         expect(find.byType(AdminUsersScreen), findsOneWidget);
         expect(find.text('Danh sách tài khoản'), findsOneWidget);
-      });
+      },
+    );
 
-      testWidgets('AdminUsersScreen: Tìm kiếm và bộ lọc vai trò hoạt động chính xác', (tester) async {
+    testWidgets(
+      'AdminUsersScreen: Tìm kiếm và bộ lọc vai trò hoạt động chính xác',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         final session = AppSession(authService: fakeService);
         await session.login(account: 'admin', password: '123456');
@@ -2388,9 +2643,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: const MaterialApp(
-              home: AdminUsersScreen(),
-            ),
+            child: const MaterialApp(home: AdminUsersScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -2430,9 +2683,12 @@ void main() {
         // Trong bảng chi tiết có dòng Mật khẩu
         expect(find.text('Chi tiết tài khoản'), findsOneWidget);
         expect(find.text('Mật khẩu'), findsOneWidget);
-      });
+      },
+    );
 
-      testWidgets('Tài khoản admin: ProfileScreen hiển thị huy hiệu Quản trị viên và menu Danh sách tài khoản', (tester) async {
+    testWidgets(
+      'Tài khoản admin: ProfileScreen hiển thị huy hiệu Quản trị viên và menu Danh sách tài khoản',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         final session = AppSession(authService: fakeService);
         await session.login(account: 'admin', password: '123456');
@@ -2440,9 +2696,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: const MaterialApp(
-              home: ProfileScreen(),
-            ),
+            child: const MaterialApp(home: ProfileScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -2460,9 +2714,12 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(AdminUsersScreen), findsOneWidget);
-      });
+      },
+    );
 
-      testWidgets('Tài khoản thường (role: user): không hiển thị bảng điều khiển admin trên Home và Profile', (tester) async {
+    testWidgets(
+      'Tài khoản thường (role: user): không hiển thị bảng điều khiển admin trên Home và Profile',
+      (tester) async {
         final fakeService = FakeAuthService(acceptedPassword: '123456');
         final session = AppSession(authService: fakeService);
         // Đăng nhập với tài khoản người dùng bình thường
@@ -2471,9 +2728,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: const MaterialApp(
-              home: HomeScreen(),
-            ),
+            child: const MaterialApp(home: HomeScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -2486,9 +2741,7 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: const MaterialApp(
-              home: ProfileScreen(),
-            ),
+            child: const MaterialApp(home: ProfileScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -2497,8 +2750,190 @@ void main() {
         expect(find.text('Quản trị viên (Admin)'), findsNothing);
         expect(find.text('Tài khoản đã xác thực'), findsOneWidget);
         expect(find.text('Danh sách tài khoản'), findsNothing);
-      });
-    });
+      },
+    );
+  });
+
+  group('Thành viên quỹ, Rời quỹ và Xoá quỹ trong Chi tiết quỹ', () {
+    testWidgets(
+      'Chi tiết quỹ: Hiển thị đầy đủ danh sách thành viên với huy hiệu Chủ quỹ, Thành viên và (Bạn)',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final testFund = {
+          'id': 'fund_with_members',
+          '_id': 'fund_with_members',
+          'name': 'Quỹ Du Lịch Hội Nhóm',
+          'fundType': 'Hội nhóm',
+          'userId': {
+            '_id': '65f0000000000000000000aa',
+            'name': 'admin',
+            'email': 'admin@gmail.com',
+          },
+          'members': [
+            {
+              'userId': {
+                '_id': '65f0000000000000000000aa',
+                'name': 'admin',
+                'email': 'admin@gmail.com',
+              },
+              'role': 'owner',
+            },
+            {
+              'userId': {
+                '_id': '65f0000000000000000000bb',
+                'name': 'Trần Văn B',
+                'phoneNumber': '0912345678',
+              },
+              'role': 'member',
+            },
+          ],
+        };
+
+        fakeService.mockFunds = [testFund];
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(home: FundDetailScreen(fund: testFund)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Kiểm tra khối "Thành viên quỹ"
+        expect(find.text('Thành viên quỹ'), findsOneWidget);
+        expect(find.text('2 thành viên'), findsOneWidget);
+
+        // Hiển thị tên thành viên
+        expect(find.text('admin'), findsOneWidget);
+        expect(find.text('Trần Văn B'), findsOneWidget);
+        expect(find.text('0912345678'), findsOneWidget);
+
+        // Huy hiệu vai trò
+        expect(find.text('Chủ quỹ'), findsOneWidget);
+        expect(find.text('Thành viên'), findsOneWidget);
+        expect(find.text('Bạn'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Chủ quỹ: Hiển thị nút "Xoá quỹ này", bấm vào hiện hộp thoại xác nhận và xoá quỹ thành công',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final ownerFund = {
+          'id': 'fund_owner_1',
+          '_id': 'fund_owner_1',
+          'name': 'Quỹ Cần Xoá',
+          'fundType': 'Hội nhóm',
+          'userId': '65f0000000000000000000aa',
+          'members': [
+            {
+              'userId': '65f0000000000000000000aa',
+              'role': 'owner',
+            },
+          ],
+        };
+
+        fakeService.mockFunds = [ownerFund];
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(home: FundDetailScreen(fund: ownerFund)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Chủ quỹ nhìn thấy nút "Xoá quỹ này" và không thấy nút "Rời khỏi quỹ"
+        expect(find.byKey(const ValueKey('delete_fund_button')), findsOneWidget);
+        expect(find.byKey(const ValueKey('leave_fund_button')), findsNothing);
+
+        // Bấm nút "Xoá quỹ này"
+        await tester.tap(find.byKey(const ValueKey('delete_fund_button')));
+        await tester.pumpAndSettle();
+
+        // Xuất hiện hộp thoại xác nhận
+        expect(find.text('Xác nhận xoá quỹ'), findsOneWidget);
+        expect(find.text('Xoá quỹ'), findsOneWidget);
+
+        // Bấm nút "Xoá quỹ" trong dialog
+        await tester.tap(find.text('Xoá quỹ'));
+        await tester.pumpAndSettle();
+
+        // Đã gọi xoá quỹ thành công trong mockFunds
+        expect(fakeService.mockFunds.isEmpty, isTrue);
+      },
+    );
+
+    testWidgets(
+      'Thành viên thường: Hiển thị nút "Rời khỏi quỹ", bấm vào hiện hộp thoại xác nhận và rời quỹ thành công',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final memberFund = {
+          'id': 'fund_member_1',
+          '_id': 'fund_member_1',
+          'name': 'Quỹ Của Người Khác',
+          'fundType': 'Hội nhóm',
+          'userId': 'different_owner_id',
+          'members': [
+            {
+              'userId': 'different_owner_id',
+              'role': 'owner',
+            },
+            {
+              'userId': '65f0000000000000000000aa',
+              'role': 'member',
+            },
+          ],
+        };
+
+        fakeService.mockFunds = [memberFund];
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(home: FundDetailScreen(fund: memberFund)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Thành viên thường nhìn thấy nút "Rời khỏi quỹ" và không thấy nút "Xoá quỹ này"
+        expect(find.byKey(const ValueKey('leave_fund_button')), findsOneWidget);
+        expect(find.byKey(const ValueKey('delete_fund_button')), findsNothing);
+
+        // Bấm nút "Rời khỏi quỹ"
+        await tester.tap(find.byKey(const ValueKey('leave_fund_button')));
+        await tester.pumpAndSettle();
+
+        // Xuất hiện hộp thoại xác nhận
+        expect(find.text('Rời khỏi quỹ?'), findsOneWidget);
+        expect(find.text('Rời quỹ'), findsOneWidget);
+
+        // Bấm nút "Rời quỹ" trong dialog
+        await tester.tap(find.text('Rời quỹ'));
+        await tester.pumpAndSettle();
+
+        // Kiểm tra trong mockFunds xem user đã được gỡ khỏi danh sách thành viên chưa
+        final updatedFund = fakeService.mockFunds.firstWhere(
+          (f) => f['id'] == 'fund_member_1',
+        );
+        final members = updatedFund['members'] as List;
+        final isStillMember = members.any((m) {
+          final uid = (m['userId'] is Map) ? m['userId']['_id'] : m['userId'];
+          return uid == '65f0000000000000000000aa';
+        });
+        expect(isStillMember, isFalse);
+      },
+    );
+  });
 }
 
 /// Đăng nhập từ màn hình đăng nhập với tài khoản cho trước.

@@ -5,11 +5,12 @@ var requireAuth = require('../middleware/auth');
 var funds = require('../controller/fundController');
 var invitations = require('../controller/invitationController');
 
-// Quản lý Quỹ (CRUD & Góp tiền)
+// Quản lý Quỹ (CRUD, Góp tiền & Rời quỹ)
 router.get('/', requireAuth, asyncHandler(funds.list));
 router.post('/', requireAuth, asyncHandler(funds.create));
 router.get('/:id', requireAuth, asyncHandler(funds.details));
 router.post('/:id/contributions', requireAuth, asyncHandler(funds.contribute));
+router.post('/:id/leave', requireAuth, asyncHandler(funds.leave));
 router.delete('/:id', requireAuth, asyncHandler(funds.delete));
 
 // Mời thành viên & Quản lý lời mời của quỹ (Use Case 06)

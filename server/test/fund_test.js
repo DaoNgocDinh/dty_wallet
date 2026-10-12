@@ -206,13 +206,109 @@ async function runTests() {
     console.log('[PASS] Test 10: Xem chi tiết quỹ sau khi góp hiển thị 2 giao dịch đóng góp');
   }
 
+  // Tạo một thành viên phụ để test các chức năng thành viên, rời quỹ, xoá quỹ
+  var memberUser = await User.create({
+    name: 'Thành viên Test',
+    email: 'test_member_leave@gmail.com',
+    passwordHash: 'dummy',
+    walletBalance: 500000
+  });
+  fund.members = [
+    { userId: user._id, role: 'owner', joinedAt: new Date() },
+    { userId: memberUser._id, role: 'member', joinedAt: new Date() }
+  ];
+  await fund.save();
+
+  // Test 11: Xem chi tiết quỹ hiển thị danh sách thành viên quỹ (Chủ quỹ & Thành viên)
+  {
+    var req = {
+      params: { id: fund._id.toString() },
+      user: { id: user._id.toString() }
+    };
+    var res = mockResponse();
+    await fundController.details(req, res);
+    assert.strictEqual(res.statusCode, 200);
+    assert(Array.isArray(res.data.fund.members));
+    assert.strictEqual(res.data.fund.members.length, 2);
+    assert.strictEqual(res.data.fund.members[0].role, 'owner');
+    assert.strictEqual(res.data.fund.members[1].role, 'member');
+    console.log('[PASS] Test 11: Xem chi tiết quỹ trả về danh sách thành viên gồm Chủ quỹ và Thành viên');
+  }
+
+  // Test 12: Chủ quỹ không thể dùng chức năng rời quỹ (chỉ có thể chọn xoá quỹ)
+  {
+    var req = {
+      params: { id: fund._id.toString() },
+      user: { id: user._id.toString() }
+    };
+    var res = mockResponse();
+    await fundController.leave(req, res);
+    assert.strictEqual(res.statusCode, 400);
+    assert.strictEqual(res.data.code, 'OWNER_CANNOT_LEAVE');
+    console.log('[PASS] Test 12: Chủ quỹ không được phép rời quỹ, hệ thống yêu cầu chọn xoá quỹ');
+  }
+
+  // Test 13: Người ngoài quỹ gọi rời quỹ -> lỗi NOT_A_MEMBER
+  {
+    var outsider = await User.create({
+      name: 'Người Ngoài Quỹ',
+      email: 'outsider_test@gmail.com',
+      passwordHash: 'dummy',
+      walletBalance: 0
+    });
+    var req = {
+      params: { id: fund._id.toString() },
+      user: { id: outsider._id.toString() }
+    };
+    var res = mockResponse();
+    await fundController.leave(req, res);
+    assert.strictEqual(res.statusCode, 400);
+    assert.strictEqual(res.data.code, 'NOT_A_MEMBER');
+    await User.deleteOne({ _id: outsider._id });
+    console.log('[PASS] Test 13: Người ngoài quỹ gọi rời quỹ bị từ chối');
+  }
+
+  // Test 14: Thành viên quỹ rời quỹ thành công
+  {
+    var req = {
+      params: { id: fund._id.toString() },
+      user: { id: memberUser._id.toString() }
+    };
+    var res = mockResponse();
+    await fundController.leave(req, res);
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.data.message, 'Rời quỹ thành công');
+
+    var checkFund = await Fund.findById(fund._id);
+    var hasMember = checkFund.members.some(function(m) {
+      return m.userId.toString() === memberUser._id.toString();
+    });
+    assert.strictEqual(hasMember, false);
+    console.log('[PASS] Test 14: Thành viên quỹ rời quỹ thành công, danh sách thành viên được cập nhật');
+  }
+
+  // Test 15: Chủ quỹ xoá quỹ thành công
+  {
+    var req = {
+      params: { id: fund._id.toString() },
+      user: { id: user._id.toString() }
+    };
+    var res = mockResponse();
+    await fundController.delete(req, res);
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.data.message, 'Xoá quỹ thành công');
+
+    var deletedFund = await Fund.findById(fund._id);
+    assert.strictEqual(deletedFund, null);
+    console.log('[PASS] Test 15: Chủ quỹ xoá quỹ thành công');
+  }
+
   // Dọn dẹp dữ liệu test
   await Transaction.deleteMany({ userId: user._id });
-  await Fund.deleteOne({ _id: fund._id });
-  await User.deleteOne({ _id: user._id });
+  await User.deleteMany({ _id: { $in: [user._id, memberUser._id] } });
   await User.db.close();
 
-  console.log('--- TẤT CẢ CÁC BÀI TEST BACKEND ĐÃ VƯỢT QUA THÀNH CÔNG (10/10) ---');
+  console.log('--- TẤT CẢ CÁC BÀI TEST BACKEND ĐÃ VƯỢT QUA THÀNH CÔNG (15/15) ---');
 }
 
 runTests().catch(function(err) {

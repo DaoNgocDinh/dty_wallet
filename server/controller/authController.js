@@ -41,7 +41,13 @@ async function uniqueEmailFromName(name) {
 }
 
 function findByName(name) {
-  return User.findOne({ name: nameRegex(name) });
+  var trimmed = String(name == null ? '' : name).trim();
+  return User.findOne({
+    $or: [
+      { name: nameRegex(trimmed) },
+      { email: trimmed.toLowerCase() }
+    ]
+  });
 }
 
 exports.register = async function(req, res) {

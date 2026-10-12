@@ -2,9 +2,11 @@
 require('dotenv').config();
 
 var assert = require('assert');
+var bcrypt = require('bcryptjs');
 var connectDatabase = require('../db/index');
 var User = require('../model/User');
 var adminController = require('../controller/adminController');
+var authController = require('../controller/authController');
 var requireAdmin = require('../middleware/admin');
 
 function mockResponse() {
@@ -127,11 +129,73 @@ async function runTests() {
     console.log('[PASS] Test 6: Tìm kiếm theo role admin hoạt động chính xác');
   }
 
+  // Test 7: Tự động sinh tài khoản admin nếu database chưa có: tài khoản:admin, mật khẩu:123456, email:admin@gmail.com
+  {
+    // Xoá tài khoản admin nếu đã tồn tại để giả lập database chưa có admin
+    await User.deleteMany({
+      $or: [
+        { name: /^admin$/i },
+        { email: 'admin@gmail.com' },
+        { role: 'admin' }
+      ]
+    });
+
+    // Gọi ensureAdminAccount
+    var createdAdmin = await connectDatabase.ensureAdminAccount();
+    assert.ok(createdAdmin, 'Phải tạo thành công tài khoản admin mới');
+    assert.strictEqual(createdAdmin.name, 'admin');
+    assert.strictEqual(createdAdmin.email, 'admin@gmail.com');
+    assert.strictEqual(createdAdmin.role, 'admin');
+
+    // Kiểm tra mật khẩu băm phải khớp với "123456"
+    var fetchedAdmin = await User.findById(createdAdmin._id).select('+passwordHash');
+    var isPasswordMatch = await bcrypt.compare('123456', fetchedAdmin.passwordHash);
+    assert.strictEqual(isPasswordMatch, true, 'Mật khẩu phải là 123456');
+    console.log('[PASS] Test 7: Tự động sinh tài khoản admin khi database chưa có (admin / 123456 / admin@gmail.com)');
+  }
+
+  // Test 8: Đăng nhập bằng tài khoản admin tự sinh (bằng username "admin" hoặc email "admin@gmail.com")
+  {
+    // Đăng nhập bằng tên tài khoản "admin"
+    var reqLoginName = {
+      body: { name: 'admin', password: '123456' }
+    };
+    var resLoginName = mockResponse();
+    await authController.login(reqLoginName, resLoginName);
+
+    assert.strictEqual(resLoginName.statusCode, 200);
+    assert.ok(resLoginName.data.token, 'Phải trả về token khi đăng nhập thành công');
+    assert.strictEqual(resLoginName.data.user.role, 'admin');
+    assert.strictEqual(resLoginName.data.user.name, 'admin');
+    assert.strictEqual(resLoginName.data.user.email, 'admin@gmail.com');
+
+    // Đăng nhập bằng email "admin@gmail.com"
+    var reqLoginEmail = {
+      body: { name: 'admin@gmail.com', password: '123456' }
+    };
+    var resLoginEmail = mockResponse();
+    await authController.login(reqLoginEmail, resLoginEmail);
+
+    assert.strictEqual(resLoginEmail.statusCode, 200);
+    assert.ok(resLoginEmail.data.token, 'Phải trả về token khi đăng nhập bằng email');
+    assert.strictEqual(resLoginEmail.data.user.role, 'admin');
+    console.log('[PASS] Test 8: Đăng nhập thành công với tài khoản admin vừa sinh bằng cả tên và email');
+  }
+
+  // Test 9: Gọi lại ensureAdminAccount khi đã có admin thì không tạo trùng
+  {
+    var beforeCount = await User.countDocuments({ role: 'admin' });
+    await connectDatabase.ensureAdminAccount();
+    var afterCount = await User.countDocuments({ role: 'admin' });
+    assert.strictEqual(beforeCount, afterCount, 'Không được tạo trùng tài khoản admin khi đã tồn tại');
+    console.log('[PASS] Test 9: Không tạo trùng tài khoản admin khi database đã có');
+  }
+
   // Dọn dẹp dữ liệu test
   await User.deleteMany({ email: /@admintest\.com$/ });
   await User.db.close();
 
-  console.log('=== TẤT CẢ 6/6 BÀI TEST BACKEND ROLE ADMIN & XEM DANH SÁCH TÀI KHOẢN ĐÃ PASS! ===');
+  console.log('=== TẤT CẢ 9/9 BÀI TEST BACKEND ROLE ADMIN & TỰ ĐỘNG SINH TÀI KHOẢN ADMIN ĐÃ PASS! ===');
 }
 
 runTests().catch(function(err) {

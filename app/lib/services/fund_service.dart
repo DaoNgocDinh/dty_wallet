@@ -37,6 +37,13 @@ class FundService {
   }) =>
       _client.delete('/funds/$fundId', token: token);
 
+  /// Rời quỹ theo ID (dành cho thành viên quỹ).
+  Future<Map<String, dynamic>> leaveFund({
+    required String token,
+    required String fundId,
+  }) =>
+      _client.post('/funds/$fundId/leave', token: token);
+
   /// Lấy thông tin chi tiết một quỹ (Use Case 05).
   Future<Map<String, dynamic>> fundDetails({
     required String token,

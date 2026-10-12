@@ -120,6 +120,212 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
     );
   }
 
+  String get _ownerId {
+    final ownerRaw = _fund['userId'];
+    if (ownerRaw is Map) {
+      return ownerRaw['_id']?.toString() ?? ownerRaw['id']?.toString() ?? '';
+    }
+    return ownerRaw?.toString() ?? '';
+  }
+
+  List<Map<String, dynamic>> get _members {
+    final raw = _fund['members'];
+    if (raw is List) {
+      return raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return [];
+  }
+
+  String _getMemberUserId(Map<String, dynamic> member) {
+    final u = member['userId'];
+    if (u is Map) {
+      return u['_id']?.toString() ?? u['id']?.toString() ?? '';
+    }
+    return u?.toString() ?? '';
+  }
+
+  String _getMemberName(Map<String, dynamic> member) {
+    final u = member['userId'];
+    if (u is Map) {
+      final name = u['name']?.toString() ?? '';
+      if (name.isNotEmpty) return name;
+    }
+    if (member['role'] == 'owner') return 'Chủ quỹ';
+    return 'Thành viên quỹ';
+  }
+
+  String _getMemberSubtitle(Map<String, dynamic> member) {
+    final u = member['userId'];
+    if (u is Map) {
+      final phone = u['phoneNumber']?.toString() ?? '';
+      if (phone.isNotEmpty) return phone;
+      final email = u['email']?.toString() ?? '';
+      if (email.isNotEmpty) return email;
+    }
+    return '';
+  }
+
+  bool _isCurrentUserOwner(String currentUserId) {
+    if (currentUserId.isEmpty) return false;
+    final ownerId = _ownerId;
+    if (ownerId.isNotEmpty && ownerId == currentUserId) return true;
+    for (final m in _members) {
+      final mId = _getMemberUserId(m);
+      if (mId == currentUserId && m['role'] == 'owner') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Xác nhận và xoá quỹ (Chỉ dành cho Chủ quỹ)
+  Future<void> _confirmDeleteFund() async {
+    final fundName = _fund['name']?.toString() ?? 'quỹ này';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFC62828), size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Xác nhận xoá quỹ',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Text(
+          'Bạn có chắc chắn muốn xoá quỹ "$fundName" không? '
+          'Hành động này không thể hoàn tác và tất cả lịch sử giao dịch sẽ bị xoá.',
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Huỷ', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC62828),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Xoá quỹ'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    final fundId = _fund['_id']?.toString() ?? _fund['id']?.toString() ?? '';
+    if (fundId.isEmpty) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await AppScope.of(context).deleteFund(fundId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Xoá quỹ "$fundName" thành công'),
+          backgroundColor: const Color(0xFF2E7D32),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pop({'deleted': true, 'fundId': fundId});
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: const Color(0xFFC62828),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
+
+  /// Xác nhận và rời quỹ (Dành cho thành viên quỹ)
+  Future<void> _confirmLeaveFund() async {
+    final fundName = _fund['name']?.toString() ?? 'quỹ này';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.exit_to_app_rounded, color: Color(0xFFC62828), size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Rời khỏi quỹ?',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Text(
+          'Bạn có chắc chắn muốn rời khỏi quỹ "$fundName"? '
+          'Bạn sẽ không còn theo dõi hay thực hiện các hoạt động trong quỹ này.',
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Huỷ', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC62828),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Rời quỹ'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    final fundId = _fund['_id']?.toString() ?? _fund['id']?.toString() ?? '';
+    if (fundId.isEmpty) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await AppScope.of(context).leaveFund(fundId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Bạn đã rời khỏi quỹ "$fundName" thành công'),
+          backgroundColor: const Color(0xFF2E7D32),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pop({'left': true, 'fundId': fundId});
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: const Color(0xFFC62828),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
+
   String _formatDate(dynamic dateVal) {
     if (dateVal == null) return '';
     try {
@@ -135,6 +341,8 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = AppScope.of(context).user?.id ?? '';
+    final isOwner = _isCurrentUserOwner(currentUserId);
     final name = _fund['name']?.toString() ?? 'Chi tiết quỹ';
     final fundType = _fund['fundType']?.toString() ?? 'Tiết kiệm';
     final currentAmount = (_fund['currentAmount'] as num?)?.toDouble() ?? 0;
@@ -376,7 +584,7 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                             ),
                             const SizedBox(height: 16),
 
-                            // Các nút hành động: + Góp quỹ (UC 05) & Mời thành viên (UC 06)
+                            // Các nút hành động
                             Row(
                               children: [
                                 Expanded(
@@ -407,6 +615,242 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                 ),
                               ],
                             ),
+
+                            // Nút Xoá quỹ (Chủ quỹ) hoặc Rời quỹ (Thành viên)
+                            if (isOwner) ...[
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                key: const ValueKey('delete_fund_button'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFC62828),
+                                  side: const BorderSide(color: Color(0xFFEF9A9A), width: 1.2),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  minimumSize: const Size(double.infinity, 42),
+                                  backgroundColor: const Color(0xFFFFEBEE).withValues(alpha: 0.5),
+                                ),
+                                icon: const Icon(Icons.delete_outline_rounded, size: 19),
+                                label: const Text(
+                                  'Xoá quỹ này',
+                                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                                ),
+                                onPressed: _confirmDeleteFund,
+                              ),
+                            ] else ...[
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                key: const ValueKey('leave_fund_button'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFD84315),
+                                  side: const BorderSide(color: Color(0xFFFFCCBC), width: 1.2),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  minimumSize: const Size(double.infinity, 42),
+                                  backgroundColor: const Color(0xFFFBE9E7).withValues(alpha: 0.5),
+                                ),
+                                icon: const Icon(Icons.exit_to_app_rounded, size: 19),
+                                label: const Text(
+                                  'Rời khỏi quỹ',
+                                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                                ),
+                                onPressed: _confirmLeaveFund,
+                              ),
+                            ],
+
+                            const SizedBox(height: 20),
+
+                            // Tiêu đề Thành viên quỹ
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Expanded(
+                                  child: Text(
+                                    'Thành viên quỹ',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${_members.length} thành viên',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Danh sách thành viên quỹ
+                            if (_members.isEmpty)
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.people_outline_rounded, color: AppColors.textSecondary, size: 20),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Chưa có danh sách thành viên',
+                                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _members.length,
+                                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                                itemBuilder: (context, index) {
+                                  final m = _members[index];
+                                  final mId = _getMemberUserId(m);
+                                  final mName = _getMemberName(m);
+                                  final mSubtitle = _getMemberSubtitle(m);
+                                  final isThisOwner = m['role'] == 'owner' || (mId.isNotEmpty && mId == _ownerId);
+                                  final isMe = currentUserId.isNotEmpty && mId == currentUserId;
+
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: AppColors.border),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 20,
+                                          backgroundColor: isThisOwner
+                                              ? const Color(0xFFFFF3E0)
+                                              : const Color(0xFFE3F2FD),
+                                          child: Text(
+                                            mName.isNotEmpty ? mName[0].toUpperCase() : '?',
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: isThisOwner
+                                                  ? const Color(0xFFE65100)
+                                                  : const Color(0xFF1976D2),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Flexible(
+                                                    child: Text(
+                                                      mName,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: AppColors.textPrimary,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  if (isMe) ...[
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 1.5,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: AppColors.lightBlue.withValues(alpha: 0.12),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: const Text(
+                                                        'Bạn',
+                                                        style: TextStyle(
+                                                          fontSize: 10.5,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: AppColors.lightBlueDark,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                              if (mSubtitle.isNotEmpty) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  mSubtitle,
+                                                  style: const TextStyle(
+                                                    fontSize: 11.5,
+                                                    color: AppColors.textSecondary,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isThisOwner
+                                                ? const Color(0xFFFFF3E0)
+                                                : const Color(0xFFF5F5F5),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: isThisOwner
+                                                  ? const Color(0xFFFFB74D)
+                                                  : const Color(0xFFE0E0E0),
+                                              width: 0.8,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                isThisOwner
+                                                    ? Icons.stars_rounded
+                                                    : Icons.person_rounded,
+                                                size: 13,
+                                                color: isThisOwner
+                                                    ? const Color(0xFFE65100)
+                                                    : const Color(0xFF616161),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                isThisOwner ? 'Chủ quỹ' : 'Thành viên',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isThisOwner
+                                                      ? const Color(0xFFE65100)
+                                                      : const Color(0xFF616161),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+
                             const SizedBox(height: 20),
 
                             // Tiêu đề Lịch sử đóng góp

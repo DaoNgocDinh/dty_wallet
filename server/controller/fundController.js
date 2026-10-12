@@ -1,5 +1,7 @@
 var bcrypt = require('bcryptjs');
 var Fund = require('../model/Fund');
+var FundInvitation = require('../model/FundInvitation');
+var Notification = require('../model/Notification');
 var Transaction = require('../model/Transaction');
 var User = require('../model/User');
 var crypto = require('crypto');
@@ -95,9 +97,30 @@ exports.details = async function(req, res) {
       { userId: req.user.id },
       { 'members.userId': req.user.id }
     ]
-  }).populate('members.userId', 'name email phoneNumber');
+  }).populate('members.userId', 'name email phoneNumber')
+    .populate('userId', 'name email phoneNumber');
+
   if (!fund) {
     return res.status(404).json({ error: 'Quỹ không tồn tại hoặc bạn không có quyền xem quỹ này' });
+  }
+
+  var fundObj = fund.toObject();
+  if (!Array.isArray(fundObj.members)) {
+    fundObj.members = [];
+  }
+
+  var ownerIdStr = fundObj.userId ? (fundObj.userId._id || fundObj.userId).toString() : '';
+  var hasOwnerInMembers = fundObj.members.some(function(m) {
+    var mid = m.userId ? (m.userId._id || m.userId).toString() : '';
+    return mid === ownerIdStr;
+  });
+
+  if (!hasOwnerInMembers && fundObj.userId) {
+    fundObj.members.unshift({
+      userId: fundObj.userId,
+      role: 'owner',
+      joinedAt: fundObj.createdAt || new Date()
+    });
   }
 
   var transactions = await Transaction.find({
@@ -105,7 +128,7 @@ exports.details = async function(req, res) {
   }).sort({ createdAt: -1 });
 
   res.json({
-    fund: fund,
+    fund: fundObj,
     transactions: transactions
   });
 };
@@ -213,12 +236,72 @@ exports.contribute = async function(req, res) {
   }
 };
 
+exports.leave = async function(req, res) {
+  var fundId = req.params.id;
+  var fund = await Fund.findById(fundId);
+  if (!fund) {
+    return res.status(404).json({ error: 'Quỹ không tồn tại', code: 'FUND_NOT_FOUND' });
+  }
+
+  // Chủ quỹ không thể dùng chức năng rời quỹ (chủ quỹ phải chọn xoá quỹ)
+  if (fund.userId && fund.userId.toString() === req.user.id.toString()) {
+    return res.status(400).json({
+      error: 'Chủ quỹ không thể rời quỹ. Bạn có thể chọn xoá quỹ.',
+      code: 'OWNER_CANNOT_LEAVE'
+    });
+  }
+
+  // Kiểm tra xem người dùng có phải là thành viên trong mảng members hay không
+  var memberIndex = -1;
+  if (Array.isArray(fund.members)) {
+    memberIndex = fund.members.findIndex(function(m) {
+      var mId = m.userId ? (m.userId._id || m.userId).toString() : m.toString();
+      return mId === req.user.id.toString();
+    });
+  }
+
+  if (memberIndex === -1) {
+    return res.status(400).json({
+      error: 'Bạn không phải là thành viên của quỹ này',
+      code: 'NOT_A_MEMBER'
+    });
+  }
+
+  // Xoá thành viên khỏi quỹ
+  fund.members.splice(memberIndex, 1);
+  await fund.save();
+
+  // Thông báo cho chủ quỹ biết thành viên đã rời quỹ
+  try {
+    var leaver = await User.findById(req.user.id);
+    var leaverName = leaver ? leaver.name : 'Một thành viên';
+    await Notification.create({
+      userId: fund.userId,
+      title: 'Thành viên đã rời quỹ',
+      message: leaverName + ' đã rời khỏi quỹ "' + fund.name + '"',
+      type: 'member_left',
+      metadata: {
+        fundId: fund._id,
+        fundName: fund.name,
+        leaverId: req.user.id,
+        leaverName: leaverName
+      }
+    });
+  } catch (_) {}
+
+  res.json({
+    message: 'Rời quỹ thành công',
+    fundId: fund._id
+  });
+};
+
 exports.delete = async function(req, res) {
   var fundId = req.params.id;
   var fund = await Fund.findOne({ _id: fundId, userId: req.user.id });
   if (!fund) {
     return res.status(404).json({ error: 'Quỹ không tồn tại hoặc bạn không có quyền xóa quỹ này' });
   }
+  await FundInvitation.deleteMany({ fundId: fund._id });
   await Fund.deleteOne({ _id: fund._id });
   res.json({ message: 'Xoá quỹ thành công', id: fund._id });
 };
