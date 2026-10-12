@@ -5,6 +5,8 @@ import '../state/app_session.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_logo.dart';
+import 'create_fund_screen.dart';
+import 'funds_screen.dart';
 import 'profile_screen.dart';
 
 /// Hàm định dạng tiền tệ VND: 0 -> '0 đ', 1000000 -> '1.000.000 đ'
@@ -671,104 +673,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- 5. Bottom Sheet: Quỹ ---
-  void _showFundsSheet(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetCtx) => Container(
-        height: MediaQuery.of(sheetCtx).size.height * 0.65,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Quỹ tiết kiệm & Đầu tư',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => Navigator.of(sheetCtx).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: FutureBuilder<Map<String, dynamic>>(
-                future: AppScope.of(context).fetchFunds(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.lightBlue,
-                      ),
-                    );
-                  }
-                  final list = (snapshot.data?['data'] as List?) ?? [];
-                  if (list.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'Chưa có quỹ nào được tạo',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    itemCount: list.length,
-                    itemBuilder: (context, index) {
-                      final item = list[index] as Map<String, dynamic>;
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: const BorderSide(
-                            color: Color(0xFFE53935),
-                            width: 1.2,
-                          ),
-                        ),
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: Color(0xFFE53935),
-                            child: Icon(
-                              Icons.groups_rounded,
-                              color: Colors.white,
-                            ),
-                          ),
-                          title: Text(
-                            item['name'] ?? 'Quỹ',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFE53935),
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Loại: ${item['fundType'] ?? 'Tiết kiệm'}',
-                          ),
-                          trailing: Text(
-                            '${item['targetAmount'] ?? 0} đ',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFE53935),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+  // --- 5. Màn hình riêng biệt: Quỹ (Không phải dạng pop-up) ---
+  void _openFundsScreen(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const FundsScreen()),
     );
   }
+
+  void _showFundsSheet(BuildContext context) => _openFundsScreen(context);
 
   // --- 6. Bottom Sheet: Hũ chi tiêu ---
   void _showJarsSheet(BuildContext context) {
@@ -1037,6 +949,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                               size: 15,
                                             ),
                                             const SizedBox(width: 4),
+                                            Text(
+                                              _isBalanceHidden ? 'Hiện' : 'Ẩn',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -1237,7 +1157,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 label: 'Quỹ',
                                 icon: Icons.groups_rounded,
                                 iconColor: const Color(0xFFE53935),
-                                onTap: () => _showFundsSheet(context),
+                                onTap: () => _openFundsScreen(context),
                               ),
                               _featureButton(
                                 label: 'Hũ chi tiêu',
@@ -1402,7 +1322,7 @@ class _HomeScreenState extends State<HomeScreen> {
           iconColor: const Color(0xFFE53935),
           title: 'Lập quỹ tiết kiệm cho bản thân và gia đình',
           subtitle: 'Tạo quỹ cá nhân, cặp đôi, tích luỹ, ...',
-          onTap: () => _showFundsSheet(context),
+          onTap: () => _openFundsScreen(context),
         ),
         const SizedBox(height: 10),
         // 2. Chi tiêu tháng (số tháng thay đổi theo thời gian thực & cập nhật theo thời gian đăng nhập)

@@ -127,7 +127,8 @@ class AuthService {
     required String token,
     required String name,
     required String fundType,
-    required double targetAmount,
+    double? targetAmount,
+    DateTime? completionDate,
   }) =>
       _client.post(
         '/funds',
@@ -135,9 +136,18 @@ class AuthService {
         body: {
           'name': name,
           'fundType': fundType,
-          'targetAmount': targetAmount,
+          if (targetAmount != null) 'targetAmount': targetAmount,
+          if (completionDate != null)
+            'completionDate': completionDate.toIso8601String(),
         },
       );
+
+  /// Xoá quỹ theo ID.
+  Future<Map<String, dynamic>> deleteFund({
+    required String token,
+    required String fundId,
+  }) =>
+      _client.delete('/funds/$fundId', token: token);
 
   /// Lấy danh sách hũ chi tiêu.
   Future<Map<String, dynamic>> spendingJars(String token) =>

@@ -131,6 +131,31 @@ class AppSession extends ChangeNotifier {
     return _authService.funds(token);
   }
 
+  /// Tạo quỹ mới.
+  Future<Map<String, dynamic>> createFund({
+    required String name,
+    required String fundType,
+    double? targetAmount,
+    DateTime? completionDate,
+  }) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.createFund(
+      token: token,
+      name: name,
+      fundType: fundType,
+      targetAmount: targetAmount,
+      completionDate: completionDate,
+    );
+  }
+
+  /// Xoá quỹ theo ID.
+  Future<Map<String, dynamic>> deleteFund(String fundId) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.deleteFund(token: token, fundId: fundId);
+  }
+
   /// Lấy danh sách hũ chi tiêu.
   Future<Map<String, dynamic>> fetchSpendingJars() {
     final token = _token;

@@ -71,6 +71,9 @@ class ApiClient {
     ),
   );
 
+  Future<Map<String, dynamic>> delete(String path, {String? token}) =>
+      _send(() => _http.delete(_uri(path), headers: _headers(token)));
+
   Map<String, String> _headers(String? token) => {
     'Content-Type': 'application/json',
     if (token != null) 'Authorization': 'Bearer $token',
