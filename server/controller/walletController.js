@@ -4,7 +4,7 @@ var Transaction = require('../model/Transaction');
 var User = require('../model/User');
 
 exports.balance = async function(req, res) {
-  res.json({ walletBalance: req.user.walletBalance });
+  res.json({ walletBalance: req.user.walletBalance, role: req.user.role || 'user' });
 };
 
 exports.depositIntent = async function(req, res) {

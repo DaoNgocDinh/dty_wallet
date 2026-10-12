@@ -22,6 +22,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+
+// Cho phép gọi API từ giao diện web (Flutter web) chạy khác origin với server.
+// Đặt CORS_ORIGIN trong .env nếu muốn giới hạn domain được phép gọi.
+var allowedOrigin = process.env.CORS_ORIGIN || '*';
+app.use('/api', function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', allowedOrigin);
+  res.header('Vary', 'Origin');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 app.use('/api', apiRouter);
 
 // API errors are returned as JSON, while the starter pages keep their HTML errors.

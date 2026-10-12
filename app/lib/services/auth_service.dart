@@ -1,4 +1,7 @@
 import 'api_client.dart';
+import 'fund_service.dart';
+
+export 'fund_service.dart';
 
 /// Thông tin người dùng trả về từ server.
 class AuthUser {
@@ -46,9 +49,14 @@ class AuthResult {
 }
 
 class AuthService {
-  AuthService({ApiClient? client}) : _client = client ?? ApiClient();
+  AuthService({ApiClient? client, FundService? fundService})
+      : _client = client ?? ApiClient(),
+        _fundService = fundService ?? FundService(client: client ?? ApiClient());
 
   final ApiClient _client;
+  final FundService _fundService;
+
+  FundService get fundService => _fundService;
 
   /// Đăng nhập bằng **tên tài khoản** (không phải email).
   Future<AuthResult> login({
@@ -123,11 +131,11 @@ class AuthService {
   Future<Map<String, dynamic>> transactions(String token) =>
       _client.get('/transactions/history', token: token);
 
-  /// Lấy danh sách quỹ.
+  /// Lấy danh sách quỹ (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> funds(String token) =>
-      _client.get('/funds', token: token);
+      _fundService.funds(token);
 
-  /// Tạo quỹ mới.
+  /// Tạo quỹ mới (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> createFund({
     required String token,
     required String name,
@@ -135,46 +143,40 @@ class AuthService {
     double? targetAmount,
     DateTime? completionDate,
   }) =>
-      _client.post(
-        '/funds',
+      _fundService.createFund(
         token: token,
-        body: {
-          'name': name,
-          'fundType': fundType,
-          if (targetAmount != null) 'targetAmount': targetAmount,
-          if (completionDate != null)
-            'completionDate': completionDate.toIso8601String(),
-        },
+        name: name,
+        fundType: fundType,
+        targetAmount: targetAmount,
+        completionDate: completionDate,
       );
 
-  /// Xoá quỹ theo ID.
+  /// Xoá quỹ theo ID (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> deleteFund({
     required String token,
     required String fundId,
   }) =>
-      _client.delete('/funds/$fundId', token: token);
+      _fundService.deleteFund(token: token, fundId: fundId);
 
-  /// Lấy thông tin chi tiết một quỹ.
+  /// Lấy thông tin chi tiết một quỹ (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> fundDetails({
     required String token,
     required String fundId,
   }) =>
-      _client.get('/funds/$fundId', token: token);
+      _fundService.fundDetails(token: token, fundId: fundId);
 
-  /// Góp tiền vào quỹ.
+  /// Góp tiền vào quỹ (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> contributeFund({
     required String token,
     required String fundId,
     required double amount,
     String? note,
   }) =>
-      _client.post(
-        '/funds/$fundId/contributions',
+      _fundService.contributeFund(
         token: token,
-        body: {
-          'amount': amount,
-          if (note != null && note.isNotEmpty) 'note': note,
-        },
+        fundId: fundId,
+        amount: amount,
+        note: note,
       );
 
   /// Lấy danh sách hũ chi tiêu.
@@ -242,19 +244,15 @@ class AuthService {
         },
       );
 
-  /// Lấy danh sách ứng viên có thể mời vào quỹ (hoặc tìm kiếm theo query).
+  /// Lấy danh sách ứng viên có thể mời vào quỹ (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> fundCandidates({
     required String token,
     required String fundId,
     String? query,
-  }) {
-    final queryParam = (query != null && query.trim().isNotEmpty)
-        ? '?query=${Uri.encodeComponent(query.trim())}'
-        : '';
-    return _client.get('/funds/$fundId/candidates$queryParam', token: token);
-  }
+  }) =>
+      _fundService.fundCandidates(token: token, fundId: fundId, query: query);
 
-  /// Gửi lời mời tham gia quỹ.
+  /// Gửi lời mời tham gia quỹ (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> sendFundInvite({
     required String token,
     required String fundId,
@@ -262,40 +260,34 @@ class AuthService {
     String? phoneNumber,
     String? name,
   }) =>
-      _client.post(
-        '/funds/$fundId/invitations',
+      _fundService.sendFundInvite(
         token: token,
-        body: {
-          if (inviteeId != null) 'inviteeId': inviteeId,
-          if (phoneNumber != null) 'phoneNumber': phoneNumber,
-          if (name != null) 'name': name,
-        },
+        fundId: fundId,
+        inviteeId: inviteeId,
+        phoneNumber: phoneNumber,
+        name: name,
       );
 
-  /// Lấy danh sách lời mời nhận được.
+  /// Lấy danh sách lời mời nhận được (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> myInvitations({
     required String token,
     String? status,
-  }) {
-    final queryParam = (status != null && status.isNotEmpty)
-        ? '?status=${Uri.encodeComponent(status)}'
-        : '';
-    return _client.get('/invitations$queryParam', token: token);
-  }
+  }) =>
+      _fundService.myInvitations(token: token, status: status);
 
-  /// Chấp nhận lời mời tham gia quỹ.
+  /// Chấp nhận lời mời tham gia quỹ (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> acceptInvitation({
     required String token,
     required String invitationId,
   }) =>
-      _client.post('/invitations/$invitationId/accept', token: token);
+      _fundService.acceptInvitation(token: token, invitationId: invitationId);
 
-  /// Từ chối lời mời tham gia quỹ.
+  /// Từ chối lời mời tham gia quỹ (Ủy quyền qua FundService).
   Future<Map<String, dynamic>> rejectInvitation({
     required String token,
     required String invitationId,
   }) =>
-      _client.post('/invitations/$invitationId/reject', token: token);
+      _fundService.rejectInvitation(token: token, invitationId: invitationId);
 
   /// Lấy danh sách thông báo và số lượng chưa đọc.
   Future<Map<String, dynamic>> notifications(String token) =>

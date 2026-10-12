@@ -31,6 +31,9 @@ class FakeAuthService implements AuthService {
   String? currentPassword = 'mat-khau-cu';
 
   @override
+  FundService get fundService => FundService();
+
+  @override
   Future<AuthResult> login({
     required String account,
     required String password,

@@ -1,39 +1,29 @@
 var express = require('express');
 var router = express.Router();
-var asyncHandler = require('../middleware/asyncHandler');
-var requireAuth = require('../middleware/auth');
-var auth = require('../controller/authController');
-var transactions = require('../controller/transactionController');
-var funds = require('../controller/fundController');
-var wallet = require('../controller/walletController');
-var jars = require('../controller/spendingJarController');
+var mongoose = require('mongoose');
 
+// Route kiểm tra trạng thái hoạt động của hệ thống
 router.get('/health', function(req, res) {
-  res.json({ status: 'ok', database: require('mongoose').connection.readyState === 1 ? 'connected' : 'disconnected' });
+  res.json({
+    status: 'ok',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
 });
 
-router.post('/auth/register', asyncHandler(auth.register));
-router.post('/auth/login', asyncHandler(auth.login));
-router.post('/auth/change-password', requireAuth, asyncHandler(auth.changePassword));
-router.put('/auth/pin', requireAuth, asyncHandler(auth.setPin));
+// Phân bổ các Router module theo từng miền nghiệp vụ rõ ràng
+router.use('/auth', require('./authRoutes'));
+router.use('/funds', require('./fundRoutes'));
+router.use('/invitations', require('./invitationRoutes'));
+router.use('/notifications', require('./notificationRoutes'));
+router.use('/wallet', require('./walletRoutes'));
+router.use('/admin', require('./adminRoutes'));
+router.use('/spending-jars', require('./spendingJarRoutes'));
+router.use('/transactions', require('./transactionRoutes'));
 
-router.get('/transactions/history', requireAuth, asyncHandler(transactions.history));
-router.get('/transactions', requireAuth, asyncHandler(transactions.search));
+// Bí danh tương thích ngược cho endpoint /users -> adminRoutes (/admin/users)
+router.use('/users', require('./adminRoutes'));
 
-router.get('/funds', requireAuth, asyncHandler(funds.list));
-router.post('/funds', requireAuth, asyncHandler(funds.create));
-router.post('/funds/:id/contributions', requireAuth, asyncHandler(funds.contribute));
-
-router.get('/wallet', requireAuth, asyncHandler(wallet.balance));
-router.post('/wallet/deposits', requireAuth, asyncHandler(wallet.depositIntent));
-router.post('/wallet/topups/mobile', requireAuth, asyncHandler(wallet.mobileTopup('mobile_topup')));
-router.post('/wallet/topups/data', requireAuth, asyncHandler(wallet.mobileTopup('data_topup')));
-router.post('/wallet/bill-payments', requireAuth, asyncHandler(wallet.payBill));
-
-router.get('/spending-jars', requireAuth, asyncHandler(jars.list));
-router.post('/spending-jars', requireAuth, asyncHandler(jars.create));
-router.get('/spending-jars/:id', requireAuth, asyncHandler(jars.details));
-
+// 404 Handler cho các API không tồn tại
 router.use(function(req, res) {
   res.status(404).json({ error: 'API endpoint not found' });
 });

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/api_client.dart';
 import '../state/app_session.dart';
 import '../theme/app_theme.dart';
-import 'fund_invitations_screen.dart';
+import 'fund_screens/fund_invitations_screen.dart';
 
 /// Modal bottom sheet hiển thị danh sách thông báo
 class NotificationsSheet extends StatefulWidget {

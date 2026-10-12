@@ -6,7 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_logo.dart';
 import 'admin_users_screen.dart';
-import 'funds_screen.dart';
+import 'fund_screens/funds_screen.dart';
 import 'notifications_sheet.dart';
 import 'profile_screen.dart';
 
