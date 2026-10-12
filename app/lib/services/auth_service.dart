@@ -149,6 +149,29 @@ class AuthService {
   }) =>
       _client.delete('/funds/$fundId', token: token);
 
+  /// Lấy thông tin chi tiết một quỹ.
+  Future<Map<String, dynamic>> fundDetails({
+    required String token,
+    required String fundId,
+  }) =>
+      _client.get('/funds/$fundId', token: token);
+
+  /// Góp tiền vào quỹ.
+  Future<Map<String, dynamic>> contributeFund({
+    required String token,
+    required String fundId,
+    required double amount,
+    String? note,
+  }) =>
+      _client.post(
+        '/funds/$fundId/contributions',
+        token: token,
+        body: {
+          'amount': amount,
+          if (note != null && note.isNotEmpty) 'note': note,
+        },
+      );
+
   /// Lấy danh sách hũ chi tiêu.
   Future<Map<String, dynamic>> spendingJars(String token) =>
       _client.get('/spending-jars', token: token);

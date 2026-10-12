@@ -47,6 +47,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final user = AppScope.of(context).user;
+    if (user != null) {
+      _walletMessage = formatVnd(user.walletBalance);
+    }
     if (!_loadedWallet) {
       _loadedWallet = true;
       _loadWallet();
@@ -674,10 +678,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --- 5. Màn hình riêng biệt: Quỹ (Không phải dạng pop-up) ---
-  void _openFundsScreen(BuildContext context) {
-    Navigator.of(context).push(
+  Future<void> _openFundsScreen(BuildContext context) async {
+    await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const FundsScreen()),
     );
+    if (mounted) {
+      _loadWallet();
+    }
   }
 
   void _showFundsSheet(BuildContext context) => _openFundsScreen(context);

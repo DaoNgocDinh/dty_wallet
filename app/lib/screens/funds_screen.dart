@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/back_label.dart';
 import 'create_fund_screen.dart';
+import 'fund_detail_screen.dart';
 
 /// Màn hình quản lý Quỹ riêng biệt (Full screen, không phải dạng pop-up)
 class FundsScreen extends StatefulWidget {
@@ -75,6 +76,15 @@ class _FundsScreenState extends State<FundsScreen> {
     if (created == true) {
       _loadFunds();
     }
+  }
+
+  Future<void> _openFundDetail(Map<String, dynamic> fund) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FundDetailScreen(fund: fund),
+      ),
+    );
+    _loadFunds();
   }
 
   Future<void> _confirmDeleteFund(Map<String, dynamic> fund) async {
@@ -301,118 +311,128 @@ class _FundsScreenState extends State<FundsScreen> {
           final hasTarget = targetAmount != null && (targetAmount as num) > 0;
           final targetAmountStr = hasTarget ? '${targetAmount} đ' : '0 đ';
 
-          return Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
+          return Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFE53935).withValues(alpha: 0.4),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  // Icon đại diện
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE53935).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.groups_rounded,
-                      color: Color(0xFFE53935),
-                      size: 24,
-                    ),
+              onTap: () => _openFundDetail(item),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFFE53935).withValues(alpha: 0.4),
+                    width: 1.2,
                   ),
-                  const SizedBox(width: 12),
-
-                  // Thông tin quỹ
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFE53935),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      // Icon đại diện
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE53935).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(height: 3),
-                        Row(
+                        child: const Icon(
+                          Icons.groups_rounded,
+                          color: Color(0xFFE53935),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Thông tin quỹ
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                fundType,
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: Colors.grey.shade700,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
                             Text(
-                              targetAmountStr,
+                              name,
                               style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFE53935),
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    fundType,
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: Colors.grey.shade700,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    targetAmountStr,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
 
-                  // NÚT XOÁ QUỸ
-                  Semantics(
-                    button: true,
-                    label: 'Xoá quỹ $name',
-                    child: Tooltip(
-                      message: 'Xoá quỹ',
-                      child: InkWell(
-                        onTap: () => _confirmDeleteFund(item),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.08),
+                      // NÚT XOÁ QUỸ
+                      Semantics(
+                        button: true,
+                        label: 'Xoá quỹ $name',
+                        child: Tooltip(
+                          message: 'Xoá quỹ',
+                          child: InkWell(
+                            onTap: () => _confirmDeleteFund(item),
                             borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: Colors.red,
-                            size: 20,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: Colors.red,
+                                size: 20,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           );

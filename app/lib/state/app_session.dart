@@ -43,12 +43,28 @@ class AppSession extends ChangeNotifier {
     return _authService.register(account: account, password: password);
   }
 
-  Future<Map<String, dynamic>> fetchWallet() {
+  Future<Map<String, dynamic>> fetchWallet() async {
     final token = _token;
     if (token == null) {
       throw ApiException('Chưa đăng nhập');
     }
-    return _authService.wallet(token);
+    final res = await _authService.wallet(token);
+    final balance = res['walletBalance'] ?? res['balance'];
+    if (balance != null && _user != null) {
+      final newBalance = (balance as num).toDouble();
+      if (_user!.walletBalance != newBalance) {
+        _user = AuthUser(
+          id: _user!.id,
+          name: _user!.name,
+          email: _user!.email,
+          walletBalance: newBalance,
+          createdAt: _user!.createdAt,
+          hasPin: _user!.hasPin,
+        );
+        notifyListeners();
+      }
+    }
+    return res;
   }
 
   /// Đăng xuất: xoá phiên ngay trên máy, sau đó báo server (nếu mạng OK).
@@ -154,6 +170,42 @@ class AppSession extends ChangeNotifier {
     final token = _token;
     if (token == null) throw ApiException('Chưa đăng nhập');
     return _authService.deleteFund(token: token, fundId: fundId);
+  }
+
+  /// Lấy thông tin chi tiết một quỹ.
+  Future<Map<String, dynamic>> fetchFundDetails(String fundId) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.fundDetails(token: token, fundId: fundId);
+  }
+
+  /// Góp tiền vào quỹ.
+  Future<Map<String, dynamic>> contributeFund({
+    required String fundId,
+    required double amount,
+    String? note,
+  }) async {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    final res = await _authService.contributeFund(
+      token: token,
+      fundId: fundId,
+      amount: amount,
+      note: note,
+    );
+    if (res['walletBalance'] != null && _user != null) {
+      final newBalance = (res['walletBalance'] as num).toDouble();
+      _user = AuthUser(
+        id: _user!.id,
+        name: _user!.name,
+        email: _user!.email,
+        walletBalance: newBalance,
+        createdAt: _user!.createdAt,
+        hasPin: _user!.hasPin,
+      );
+      notifyListeners();
+    }
+    return res;
   }
 
   /// Lấy danh sách hũ chi tiêu.
