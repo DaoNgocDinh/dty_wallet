@@ -1,11 +1,15 @@
 // Widget test cho luồng đăng nhập / đăng ký (dùng AuthService giả, không gọi API thật).
 
 import 'package:app/main.dart';
+import 'package:app/screens/admin_users_screen.dart';
 import 'package:app/screens/change_password_screen.dart';
 import 'package:app/screens/create_fund_screen.dart';
 import 'package:app/screens/contribute_fund_screen.dart';
 import 'package:app/screens/fund_detail_screen.dart';
 import 'package:app/screens/funds_screen.dart';
+import 'package:app/screens/invite_member_screen.dart';
+import 'package:app/screens/fund_invitations_screen.dart';
+import 'package:app/screens/notifications_sheet.dart';
 import 'package:app/screens/home_screen.dart';
 import 'package:app/screens/login_screen.dart';
 import 'package:app/screens/profile_screen.dart';
@@ -59,6 +63,7 @@ class FakeAuthService implements AuthService {
   Future<Map<String, dynamic>> wallet(String token) async => {
         'balance': mockWalletBalance,
         'walletBalance': mockWalletBalance,
+        'role': token.toLowerCase().contains('admin') ? 'admin' : 'user',
       };
 
   @override
@@ -89,15 +94,19 @@ class FakeAuthService implements AuthService {
   }) async {}
 
   @override
-  Future<Map<String, dynamic>> profile(String token) async => {
-        'user': {
-          'id': '65f0000000000000000000aa',
-          'name': 'admin',
-          'email': 'admin@gmail.com',
-          'walletBalance': 1000000,
-          'hasPin': false,
-        }
-      };
+  Future<Map<String, dynamic>> profile(String token) async {
+    final isAdmin = token.toLowerCase().contains('admin');
+    return {
+      'user': {
+        'id': '65f0000000000000000000aa',
+        'name': isAdmin ? 'admin' : 'nguoidung',
+        'email': isAdmin ? 'admin@gmail.com' : 'nguoidung@gmail.com',
+        'walletBalance': mockWalletBalance,
+        'hasPin': false,
+        'role': isAdmin ? 'admin' : 'user',
+      }
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> transactions(String token) async => {'data': []};
@@ -258,6 +267,292 @@ class FakeAuthService implements AuthService {
     String? content,
   }) async => {'message': 'Bill paid'};
 
+  List<Map<String, dynamic>> mockCandidates = [
+    {
+      'id': 'user_b',
+      '_id': 'user_b',
+      'name': 'Trần Văn B',
+      'phoneNumber': '0912345678',
+      'email': 'tranvanb@gmail.com',
+      'isMember': false,
+      'hasPendingInvite': false,
+      'canInvite': true,
+    },
+    {
+      'id': 'user_d',
+      '_id': 'user_d',
+      'name': 'Lê Văn D',
+      'phoneNumber': '0987654321',
+      'email': 'levand@gmail.com',
+      'isMember': true,
+      'hasPendingInvite': false,
+      'canInvite': false,
+    },
+    {
+      'id': 'user_e',
+      '_id': 'user_e',
+      'name': 'Phạm Văn E',
+      'phoneNumber': '0911223344',
+      'email': 'phamvane@gmail.com',
+      'isMember': false,
+      'hasPendingInvite': true,
+      'canInvite': false,
+    },
+  ];
+
+  List<Map<String, dynamic>> mockInvitations = [];
+  List<Map<String, dynamic>> mockNotificationsList = [];
+  bool shouldFailSendInvite = false;
+
+  @override
+  Future<Map<String, dynamic>> fundCandidates({
+    required String token,
+    required String fundId,
+    String? query,
+  }) async {
+    final fund = mockFunds.firstWhere(
+      (f) => (f['id'] ?? f['_id']) == fundId,
+      orElse: () => {'fundType': 'Hội nhóm'},
+    );
+    if (fund['fundType'] == 'Cá nhân') {
+      throw ApiException('Quỹ cá nhân không thể mời thành viên',
+          code: 'PERSONAL_FUND_CANNOT_INVITE', statusCode: 400);
+    }
+    final availableCandidates = mockCandidates.where((c) {
+      final role = c['role']?.toString().toLowerCase();
+      final name = c['name']?.toString().trim().toLowerCase();
+      final email = c['email']?.toString().trim().toLowerCase();
+      return role != 'admin' &&
+          name != 'admin' &&
+          !(email?.startsWith('admin@') ?? false);
+    }).toList();
+
+    if (query != null && query.trim().isNotEmpty) {
+      final q = query.trim().toLowerCase();
+      final filtered = availableCandidates.where((c) {
+        final name = (c['name'] ?? '').toString().toLowerCase();
+        final phone = (c['phoneNumber'] ?? '').toString();
+        return name.contains(q) || phone.contains(q);
+      }).toList();
+      if (filtered.isEmpty) {
+        return {
+          'count': 0,
+          'data': [],
+          'message': 'Không tìm thấy người dùng phù hợp',
+          'code': 'NO_USER_FOUND',
+        };
+      }
+      return {'count': filtered.length, 'data': filtered};
+    }
+    return {'count': availableCandidates.length, 'data': availableCandidates};
+  }
+
+  @override
+  Future<Map<String, dynamic>> sendFundInvite({
+    required String token,
+    required String fundId,
+    String? inviteeId,
+    String? phoneNumber,
+    String? name,
+  }) async {
+    if (shouldFailSendInvite) {
+      throw ApiException('Gửi lời mời không thành công',
+          code: 'INVITE_FAILED', statusCode: 500);
+    }
+    final candidate = mockCandidates.firstWhere(
+      (c) =>
+          c['id'] == inviteeId ||
+          c['_id'] == inviteeId ||
+          c['phoneNumber'] == phoneNumber,
+      orElse: () => throw ApiException(
+          'Người dùng chưa đăng ký tài khoản ví điện tử hoặc không tồn tại',
+          code: 'USER_NOT_FOUND',
+          statusCode: 400),
+    );
+    if (candidate['isMember'] == true) {
+      throw ApiException('Người dùng đã là thành viên của quỹ',
+          code: 'ALREADY_MEMBER', statusCode: 400);
+    }
+    if (candidate['hasPendingInvite'] == true) {
+      throw ApiException('Người dùng đã có lời mời tham gia quỹ',
+          code: 'PENDING_INVITATION_EXISTS', statusCode: 400);
+    }
+
+    candidate['hasPendingInvite'] = true;
+    candidate['canInvite'] = false;
+
+    final invite = {
+      'id': 'inv_${mockInvitations.length + 1}',
+      '_id': 'inv_${mockInvitations.length + 1}',
+      'fundId': fundId,
+      'fundName': 'Quỹ Test Hội Nhóm',
+      'fundType': 'Hội nhóm',
+      'inviterId': 'admin_id',
+      'inviterName': 'admin',
+      'inviteeId': candidate['id'],
+      'inviteeName': candidate['name'],
+      'inviteePhone': candidate['phoneNumber'],
+      'status': 'pending',
+      'createdAt': DateTime.now().toIso8601String(),
+    };
+    mockInvitations.insert(0, invite);
+
+    mockNotificationsList.insert(0, {
+      'id': 'notif_${mockNotificationsList.length + 1}',
+      '_id': 'notif_${mockNotificationsList.length + 1}',
+      'title': 'Lời mời tham gia quỹ',
+      'message': 'admin đã mời bạn tham gia quỹ "Quỹ Test Hội Nhóm"',
+      'type': 'fund_invitation',
+      'isRead': false,
+      'createdAt': DateTime.now().toIso8601String(),
+      'metadata': {'invitationId': invite['id'], 'fundId': fundId},
+    });
+
+    return {'message': 'Gửi lời mời thành công', 'data': invite};
+  }
+
+  @override
+  Future<Map<String, dynamic>> myInvitations({
+    required String token,
+    String? status,
+  }) async {
+    var list = mockInvitations;
+    if (status != null && status.isNotEmpty) {
+      list = list.where((i) => i['status'] == status).toList();
+    }
+    return {'count': list.length, 'data': list};
+  }
+
+  @override
+  Future<Map<String, dynamic>> acceptInvitation({
+    required String token,
+    required String invitationId,
+  }) async {
+    final inv = mockInvitations.firstWhere(
+      (i) => i['id'] == invitationId || i['_id'] == invitationId,
+      orElse: () => throw ApiException('Lời mời không tồn tại'),
+    );
+    inv['status'] = 'accepted';
+    return {'message': 'Tham gia quỹ thành công', 'data': inv};
+  }
+
+  @override
+  Future<Map<String, dynamic>> rejectInvitation({
+    required String token,
+    required String invitationId,
+  }) async {
+    final inv = mockInvitations.firstWhere(
+      (i) => i['id'] == invitationId || i['_id'] == invitationId,
+      orElse: () => throw ApiException('Lời mời không tồn tại'),
+    );
+    inv['status'] = 'rejected';
+    return {'message': 'Đã từ chối lời mời', 'data': inv};
+  }
+
+  @override
+  Future<Map<String, dynamic>> notifications(String token) async {
+    final unread =
+        mockNotificationsList.where((n) => n['isRead'] != true).length;
+    return {
+      'count': mockNotificationsList.length,
+      'unreadCount': unread,
+      'data': mockNotificationsList,
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> markNotificationRead({
+    required String token,
+    required String notificationId,
+  }) async {
+    final n = mockNotificationsList.firstWhere(
+      (item) => item['id'] == notificationId || item['_id'] == notificationId,
+      orElse: () => throw ApiException('Thông báo không tồn tại'),
+    );
+    n['isRead'] = true;
+    final unread =
+        mockNotificationsList.where((item) => item['isRead'] != true).length;
+    return {'message': 'Đã đánh dấu đã đọc', 'unreadCount': unread};
+  }
+
+  @override
+  Future<Map<String, dynamic>> markAllNotificationsRead(String token) async {
+    for (var n in mockNotificationsList) {
+      n['isRead'] = true;
+    }
+    return {'message': 'Đã đánh dấu tất cả đã đọc', 'unreadCount': 0};
+  }
+
+  List<Map<String, dynamic>> mockAdminUsers = [
+    {
+      'id': 'u1',
+      '_id': 'u1',
+      'name': 'Administrator',
+      'email': 'admin@gmail.com',
+      'phoneNumber': '0901234567',
+      'password': '123456',
+      'role': 'admin',
+      'walletBalance': 5000000,
+      'createdAt': '2026-03-01T00:00:00.000Z',
+    },
+    {
+      'id': 'u2',
+      '_id': 'u2',
+      'name': 'Nguyễn Văn A',
+      'email': 'nguyenvana@gmail.com',
+      'phoneNumber': '0912345678',
+      'password': '123456',
+      'role': 'user',
+      'walletBalance': 1500000,
+      'createdAt': '2026-03-05T00:00:00.000Z',
+    },
+    {
+      'id': 'u3',
+      '_id': 'u3',
+      'name': 'Trần Thị B',
+      'email': 'tranthib@gmail.com',
+      'phoneNumber': '0987654321',
+      'password': '123456',
+      'role': 'user',
+      'walletBalance': 850000,
+      'createdAt': '2026-03-10T00:00:00.000Z',
+    },
+  ];
+
+  @override
+  Future<Map<String, dynamic>> adminUsers(
+    String token, {
+    String? search,
+  }) async {
+    var users = List<Map<String, dynamic>>.from(mockAdminUsers);
+    if (search != null && search.trim().isNotEmpty) {
+      final q = search.trim().toLowerCase();
+      users = users.where((u) {
+        final name = (u['name'] ?? '').toString().toLowerCase();
+        final email = (u['email'] ?? '').toString().toLowerCase();
+        final phone = (u['phoneNumber'] ?? '').toString().toLowerCase();
+        final role = (u['role'] ?? '').toString().toLowerCase();
+        return name.contains(q) ||
+            email.contains(q) ||
+            phone.contains(q) ||
+            role.contains(q);
+      }).toList();
+    }
+    final adminCount = users.where((u) => u['role'] == 'admin').length;
+    final userCount = users.where((u) => u['role'] == 'user').length;
+    return {
+      'count': users.length,
+      'total': users.length,
+      'data': users,
+      'users': users,
+      'stats': {
+        'total': users.length,
+        'admins': adminCount,
+        'users': userCount,
+      },
+    };
+  }
+
   AuthResult _result(String account) => AuthResult(
         token: 'fake-jwt-token-for-$account',
         user: AuthUser(
@@ -265,6 +560,7 @@ class FakeAuthService implements AuthService {
           name: account,
           email: '$account@gmail.com',
           walletBalance: 1000000,
+          role: account.toLowerCase() == 'admin' ? 'admin' : 'user',
         ),
       );
 }
@@ -1550,6 +1846,656 @@ void main() {
       expect(fakeService.mockWalletBalance, 800000.0);
     });
   });
+
+  group('Chức năng Mời thành viên & Thông báo lời mời quỹ (Use Case 06)', () {
+      testWidgets('Trang chủ: Nút hình chuông bên cạnh avatar và hiển thị chấm đỏ khi có thông báo mới', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockNotificationsList = [
+          {
+            'id': 'notif_1',
+            '_id': 'notif_1',
+            'title': 'Lời mời tham gia quỹ',
+            'message': 'Đào Ngọc Đình đã mời bạn tham gia quỹ "Quỹ Hội Nhóm"',
+            'type': 'fund_invitation',
+            'isRead': false,
+            'createdAt': DateTime.now().toIso8601String(),
+            'metadata': {'invitationId': 'inv_10'},
+          }
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: HomeScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Kiểm tra có nút Chuông Thông báo
+        expect(find.byTooltip('Thông báo'), findsOneWidget);
+        expect(find.byIcon(Icons.notifications_rounded), findsOneWidget);
+
+        // Bấm vào nút Chuông
+        await tester.tap(find.byTooltip('Thông báo'));
+        await tester.pumpAndSettle();
+
+        // Mở NotificationsSheet
+        expect(find.byType(NotificationsSheet), findsOneWidget);
+        expect(find.text('Thông báo'), findsWidgets);
+        expect(find.text('Lời mời tham gia quỹ'), findsOneWidget);
+        expect(find.text('Đào Ngọc Đình đã mời bạn tham gia quỹ "Quỹ Hội Nhóm"'), findsOneWidget);
+      });
+
+      testWidgets('Thông báo: Khi bấm vào lời mời quỹ sẽ chuyển sang giao diện kiểm tra lời mời hiện có (FundInvitationsScreen)', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockNotificationsList = [
+          {
+            'id': 'notif_1',
+            '_id': 'notif_1',
+            'title': 'Lời mời tham gia quỹ',
+            'message': 'Đào Ngọc Đình đã mời bạn tham gia quỹ "Quỹ Du Lịch Hè"',
+            'type': 'fund_invitation',
+            'isRead': false,
+            'createdAt': DateTime.now().toIso8601String(),
+            'metadata': {'invitationId': 'inv_10'},
+          }
+        ];
+        fakeService.mockInvitations = [
+          {
+            'id': 'inv_10',
+            '_id': 'inv_10',
+            'fundId': 'fund_1',
+            'fundName': 'Quỹ Du Lịch Hè',
+            'fundType': 'Hội nhóm',
+            'inviterName': 'Đào Ngọc Đình',
+            'status': 'pending',
+            'createdAt': DateTime.now().toIso8601String(),
+          }
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: HomeScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Mở thông báo
+        await tester.tap(find.byTooltip('Thông báo'));
+        await tester.pumpAndSettle();
+
+        // Bấm vào lời mời
+        await tester.tap(find.text('Lời mời tham gia quỹ'));
+        await tester.pumpAndSettle();
+
+        // Chuyển sang FundInvitationsScreen
+        expect(find.byType(FundInvitationsScreen), findsOneWidget);
+        expect(find.text('Quỹ Du Lịch Hè'), findsOneWidget);
+        expect(find.text('Đào Ngọc Đình đã mời bạn tham gia quỹ này'), findsOneWidget);
+        expect(find.text('Đồng ý'), findsOneWidget);
+        expect(find.text('Từ chối'), findsOneWidget);
+      });
+
+      testWidgets('Kiểm tra lời mời hiện có (FundInvitationsScreen): Đồng ý tham gia quỹ', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockInvitations = [
+          {
+            'id': 'inv_1',
+            '_id': 'inv_1',
+            'fundId': 'fund_1',
+            'fundName': 'Quỹ Cặp Đôi',
+            'fundType': 'Cặp đôi',
+            'inviterName': 'Đào Ngọc Đình',
+            'status': 'pending',
+            'createdAt': DateTime.now().toIso8601String(),
+          }
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: FundInvitationsScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Quỹ Cặp Đôi'), findsOneWidget);
+        expect(find.text('Chờ xử lý'), findsWidgets);
+
+        // Bấm Đồng ý
+        await tester.tap(find.text('Đồng ý'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tham gia quỹ thành công'), findsOneWidget);
+        expect(find.text('Đã tham gia'), findsOneWidget);
+        expect(fakeService.mockInvitations.first['status'], 'accepted');
+      });
+
+      testWidgets('Kiểm tra lời mời hiện có (FundInvitationsScreen): Từ chối lời mời', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockInvitations = [
+          {
+            'id': 'inv_2',
+            '_id': 'inv_2',
+            'fundId': 'fund_2',
+            'fundName': 'Quỹ Hội Nhóm',
+            'fundType': 'Hội nhóm',
+            'inviterName': 'Nguyễn Văn A',
+            'status': 'pending',
+            'createdAt': DateTime.now().toIso8601String(),
+          }
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: FundInvitationsScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Bấm Từ chối
+        await tester.tap(find.text('Từ chối'));
+        await tester.pumpAndSettle();
+
+        // Xuất hiện dialog xác nhận từ chối
+        expect(find.text('Từ chối lời mời'), findsWidgets);
+        expect(find.text('Bạn có chắc chắn muốn từ chối lời mời tham gia quỹ "Quỹ Hội Nhóm" không?'), findsOneWidget);
+
+        // Xác nhận từ chối trong dialog
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Từ chối'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Đã từ chối lời mời'), findsOneWidget);
+        expect(find.text('Đã từ chối'), findsOneWidget);
+        expect(fakeService.mockInvitations.first['status'], 'rejected');
+      });
+
+      testWidgets('Chi tiết quỹ: Quỹ không phải cá nhân có nút "Mời thành viên", bấm vào mở giao diện riêng InviteMemberScreen', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final groupFund = {
+          'id': 'fund_group_1',
+          'name': 'Quỹ Hội Nhóm Phượt',
+          'fundType': 'Hội nhóm',
+          'currentAmount': 2000000,
+          'targetAmount': 10000000,
+        };
+        fakeService.mockFunds = [groupFund];
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: FundDetailScreen(fund: groupFund),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Kiểm tra cả 2 nút + Góp quỹ và Mời thành viên đều có mặt
+        expect(find.text('+ Góp quỹ'), findsOneWidget);
+        expect(find.text('Mời thành viên'), findsOneWidget);
+
+        // Bấm Mời thành viên
+        await tester.tap(find.text('Mời thành viên'));
+        await tester.pumpAndSettle();
+
+        // Mở giao diện riêng InviteMemberScreen
+        expect(find.byType(InviteMemberScreen), findsOneWidget);
+        expect(find.text('Quỹ: Quỹ Hội Nhóm Phượt'), findsOneWidget);
+      });
+
+      testWidgets('Use Case 06: Ngoại lệ 1.2 / E2: Quỹ cá nhân ấn Mời thành viên báo "Quỹ cá nhân không thể mời thành viên"', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final personalFund = {
+          'id': 'fund_p_1',
+          'name': 'Quỹ Cá Nhân',
+          'fundType': 'Cá nhân',
+          'currentAmount': 1000000,
+        };
+        fakeService.mockFunds = [personalFund];
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: FundDetailScreen(fund: personalFund),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Bấm Mời thành viên trên quỹ Cá nhân
+        await tester.tap(find.text('Mời thành viên'));
+        await tester.pumpAndSettle();
+
+        // Thông báo Exception E2
+        expect(find.text('Quỹ cá nhân không thể mời thành viên'), findsOneWidget);
+      });
+
+      testWidgets('Use Case 06: Luồng 4.1 & Gợi ý: Hiển thị danh sách đề xuất người dùng khi mở màn hình', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final groupFund = {
+          'id': 'fund_group_1',
+          'name': 'Quỹ Du Lịch Hè',
+          'fundType': 'Hội nhóm',
+        };
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: InviteMemberScreen(fund: groupFund),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Hiển thị danh sách đề xuất
+        expect(find.text('Danh sách đề xuất'), findsOneWidget);
+        expect(find.text('Trần Văn B'), findsOneWidget);
+        expect(find.text('Lê Văn D'), findsOneWidget);
+        expect(find.text('Phạm Văn E'), findsOneWidget);
+
+        // Ngoại lệ 6.1 / E4: Lê Văn D đã là thành viên của quỹ
+        expect(find.text('Đã là thành viên'), findsOneWidget);
+
+        // Ngoại lệ 6.2 / E5: Phạm Văn E đã có lời mời đang chờ xử lý
+        expect(find.text('Đã gửi lời mời'), findsOneWidget);
+
+        // Miền 1: Trần Văn B có nút "Mời"
+        expect(find.text('Mời'), findsOneWidget);
+      });
+
+      testWidgets('Ẩn admin khỏi danh sách đề xuất: Tài khoản admin không xuất hiện trong danh sách đề xuất ứng viên', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        // Thêm một tài khoản admin vào danh sách mock
+        fakeService.mockCandidates = [
+          ...fakeService.mockCandidates,
+          {
+            'id': 'user_admin',
+            '_id': 'user_admin',
+            'name': 'admin',
+            'phoneNumber': '0901234567',
+            'email': 'admin@gmail.com',
+            'role': 'admin',
+            'isMember': false,
+            'hasPendingInvite': false,
+            'canInvite': true,
+          }
+        ];
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'user1', password: '123456');
+
+        final groupFund = {
+          'id': 'fund_group_1',
+          'name': 'Quỹ Du Lịch Hè',
+          'fundType': 'Hội nhóm',
+        };
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: InviteMemberScreen(fund: groupFund),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Danh sách đề xuất hiển thị người dùng thường, nhưng KHÔNG hiển thị admin
+        expect(find.text('Danh sách đề xuất'), findsOneWidget);
+        expect(find.text('Trần Văn B'), findsOneWidget);
+        expect(find.text('admin'), findsNothing);
+        expect(find.text('admin@gmail.com'), findsNothing);
+      });
+
+      testWidgets('Use Case 06: Ngoại lệ 4.2 / E3: Tìm kiếm không có kết quả hiển thị "Không tìm thấy người dùng phù hợp"', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final groupFund = {
+          'id': 'fund_group_1',
+          'name': 'Quỹ Du Lịch Hè',
+          'fundType': 'Hội nhóm',
+        };
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: InviteMemberScreen(fund: groupFund),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Nhập tìm kiếm không tồn tại
+        await tester.enterText(find.byType(TextField), 'Nguyễn Văn XYZ');
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+
+        // Hiển thị thông báo E3
+        expect(find.text('Không tìm thấy người dùng phù hợp'), findsOneWidget);
+      });
+
+      testWidgets('Use Case 06: Luồng con 4.1 & 4.2: Tìm kiếm theo tên hoặc SĐT hiển thị người dùng phù hợp', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final groupFund = {
+          'id': 'fund_group_1',
+          'name': 'Quỹ Du Lịch Hè',
+          'fundType': 'Hội nhóm',
+        };
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: InviteMemberScreen(fund: groupFund),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Tìm theo SĐT 0912345678
+        await tester.enterText(find.byType(TextField), '0912345678');
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Trần Văn B'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ListView),
+            matching: find.text('0912345678'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Lê Văn D'), findsNothing);
+      });
+
+      testWidgets('Use Case 06: Luồng thành công Miền 1: Mời Trần Văn B, hiện hộp thoại xác nhận và thông báo "Gửi lời mời thành công"', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final groupFund = {
+          'id': 'fund_group_1',
+          'name': 'Quỹ Du Lịch Hè',
+          'fundType': 'Hội nhóm',
+        };
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: InviteMemberScreen(fund: groupFund),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Bấm nút Mời trên Trần Văn B
+        await tester.tap(find.text('Mời'));
+        await tester.pumpAndSettle();
+
+        // Hiện dialog xác nhận
+        expect(find.text('Xác nhận lời mời'), findsOneWidget);
+        expect(find.text('Bạn có muốn mời Trần Văn B tham gia vào quỹ "Quỹ Du Lịch Hè" không?'), findsOneWidget);
+
+        // Bấm Gửi lời mời trong dialog
+        await tester.tap(find.text('Gửi lời mời'));
+        await tester.pumpAndSettle();
+
+        // Thông báo thành công
+        expect(find.text('Gửi lời mời thành công'), findsOneWidget);
+
+        // Trần Văn B đổi trạng thái thành "Đã gửi lời mời"
+        expect(find.text('Đã gửi lời mời'), findsNWidgets(2)); // Phạm Văn E + Trần Văn B
+      });
+
+      testWidgets('Use Case 06: Ngoại lệ 7.1 / E6: Xảy ra lỗi khi gửi lời mời hiển thị "Gửi lời mời không thành công"', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.shouldFailSendInvite = true;
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final groupFund = {
+          'id': 'fund_group_1',
+          'name': 'Quỹ Du Lịch Hè',
+          'fundType': 'Hội nhóm',
+        };
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(
+              home: InviteMemberScreen(fund: groupFund),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Bấm Mời
+        await tester.tap(find.text('Mời'));
+        await tester.pumpAndSettle();
+
+        // Bấm Gửi lời mời trong dialog
+        await tester.tap(find.text('Gửi lời mời'));
+        await tester.pumpAndSettle();
+
+        // Thông báo E6
+        expect(find.text('Gửi lời mời không thành công'), findsOneWidget);
+      });
+    });
+
+    group('Tính năng Role Admin & Xem danh sách tài khoản', () {
+      testWidgets('Tài khoản admin: HomeScreen hiển thị bảng điều khiển admin và mở màn hình Danh sách tài khoản', (tester) async {
+        await tester.pumpWidget(buildApp());
+        await _login(tester, account: 'admin', password: '123456');
+
+        expect(find.byType(HomeScreen), findsOneWidget);
+
+        // Nút DS tài khoản trong lưới tính năng
+        final adminFeatureBtn = find.text('DS tài khoản');
+        await tester.ensureVisible(adminFeatureBtn);
+        expect(adminFeatureBtn, findsOneWidget);
+
+        // Cuộn để tìm banner Bảng điều khiển Quản trị viên
+        final adminBanner = find.text('Bảng điều khiển Quản trị viên');
+        await tester.ensureVisible(adminBanner);
+        expect(adminBanner, findsOneWidget);
+        expect(find.text('Xem danh sách tài khoản & tra cứu người dùng'), findsOneWidget);
+
+        // Bấm vào banner
+        await tester.tap(adminBanner);
+        await tester.pumpAndSettle();
+
+        // Đã mở AdminUsersScreen
+        expect(find.byType(AdminUsersScreen), findsOneWidget);
+        expect(find.text('Danh sách tài khoản'), findsOneWidget);
+
+        // Hiển thị thống kê KPI
+        expect(find.text('Tổng tài khoản'), findsOneWidget);
+        expect(find.text('Người dùng'), findsWidgets);
+
+        // Hiển thị danh sách các tài khoản mock
+        expect(find.text('Administrator'), findsOneWidget);
+        expect(find.text('Nguyễn Văn A'), findsOneWidget);
+        await tester.drag(find.byType(ListView), const Offset(0, -150));
+        await tester.pumpAndSettle();
+        expect(find.text('Trần Thị B'), findsOneWidget);
+      });
+
+      testWidgets('Tài khoản admin: bấm nút tính năng DS tài khoản trong lưới mở màn hình AdminUsersScreen', (tester) async {
+        await tester.pumpWidget(buildApp());
+        await _login(tester, account: 'admin', password: '123456');
+
+        expect(find.byType(HomeScreen), findsOneWidget);
+
+        // Bấm trực tiếp vào nút tính năng DS tài khoản
+        final adminFeatureBtn = find.text('DS tài khoản');
+        await tester.ensureVisible(adminFeatureBtn);
+        await tester.tap(adminFeatureBtn);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AdminUsersScreen), findsOneWidget);
+        expect(find.text('Danh sách tài khoản'), findsOneWidget);
+      });
+
+      testWidgets('AdminUsersScreen: Tìm kiếm và bộ lọc vai trò hoạt động chính xác', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: AdminUsersScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('admin@gmail.com'), findsOneWidget);
+        expect(find.text('nguyenvana@gmail.com'), findsOneWidget);
+
+        // Nhập từ khoá tìm kiếm
+        final searchField = find.byType(TextField);
+        await tester.enterText(searchField, 'Nguyễn Văn A');
+        await tester.pumpAndSettle();
+
+        expect(find.text('nguyenvana@gmail.com'), findsOneWidget);
+        expect(find.text('admin@gmail.com'), findsNothing);
+
+        // Xoá tìm kiếm
+        await tester.enterText(searchField, '');
+        await tester.pumpAndSettle();
+        expect(find.text('admin@gmail.com'), findsOneWidget);
+
+        // Bấm chip lọc vai trò "Admin (1)"
+        final adminFilterChip = find.text('Admin (1)');
+        await tester.tap(adminFilterChip);
+        await tester.pumpAndSettle();
+
+        expect(find.text('admin@gmail.com'), findsOneWidget);
+        expect(find.text('nguyenvana@gmail.com'), findsNothing);
+
+        // Hiển thị mật khẩu trên thẻ người dùng
+        expect(find.text('MK: '), findsOneWidget);
+        expect(find.text('123456'), findsOneWidget);
+
+        // Bấm vào thẻ để mở chi tiết người dùng
+        await tester.tap(find.text('Administrator'));
+        await tester.pumpAndSettle();
+
+        // Trong bảng chi tiết có dòng Mật khẩu
+        expect(find.text('Chi tiết tài khoản'), findsOneWidget);
+        expect(find.text('Mật khẩu'), findsOneWidget);
+      });
+
+      testWidgets('Tài khoản admin: ProfileScreen hiển thị huy hiệu Quản trị viên và menu Danh sách tài khoản', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: ProfileScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Huy hiệu admin
+        expect(find.text('Quản trị viên (Admin)'), findsOneWidget);
+
+        // Menu Danh sách tài khoản
+        final adminMenuRow = find.text('Danh sách tài khoản');
+        await tester.ensureVisible(adminMenuRow);
+        expect(adminMenuRow, findsOneWidget);
+
+        // Bấm vào menu mở AdminUsersScreen
+        await tester.tap(adminMenuRow);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AdminUsersScreen), findsOneWidget);
+      });
+
+      testWidgets('Tài khoản thường (role: user): không hiển thị bảng điều khiển admin trên Home và Profile', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        // Đăng nhập với tài khoản người dùng bình thường
+        await session.login(account: 'user1', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: HomeScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Không hiển thị nút và banner Quản trị viên
+        expect(find.text('DS tài khoản'), findsNothing);
+        expect(find.text('Bảng điều khiển Quản trị viên'), findsNothing);
+
+        // Vào ProfileScreen
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: ProfileScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Không hiển thị badge admin và menu Danh sách tài khoản
+        expect(find.text('Quản trị viên (Admin)'), findsNothing);
+        expect(find.text('Tài khoản đã xác thực'), findsOneWidget);
+        expect(find.text('Danh sách tài khoản'), findsNothing);
+      });
+    });
 }
 
 /// Đăng nhập từ màn hình đăng nhập với tài khoản cho trước.

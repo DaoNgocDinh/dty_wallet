@@ -50,14 +50,17 @@ class AppSession extends ChangeNotifier {
     }
     final res = await _authService.wallet(token);
     final balance = res['walletBalance'] ?? res['balance'];
-    if (balance != null && _user != null) {
-      final newBalance = (balance as num).toDouble();
-      if (_user!.walletBalance != newBalance) {
+    final serverRole = res['role'] as String?;
+    if (_user != null) {
+      final newBalance = balance != null ? (balance as num).toDouble() : _user!.walletBalance;
+      final newRole = serverRole ?? _user!.role;
+      if (_user!.walletBalance != newBalance || _user!.role != newRole) {
         _user = AuthUser(
           id: _user!.id,
           name: _user!.name,
           email: _user!.email,
           walletBalance: newBalance,
+          role: newRole,
           createdAt: _user!.createdAt,
           hasPin: _user!.hasPin,
         );
@@ -114,6 +117,7 @@ class AppSession extends ChangeNotifier {
         name: _user!.name,
         email: _user!.email,
         walletBalance: _user!.walletBalance,
+        role: _user!.role,
         createdAt: _user!.createdAt,
         hasPin: true,
       );
@@ -271,6 +275,96 @@ class AppSession extends ChangeNotifier {
       pin: pin,
       content: content,
     );
+  }
+
+  /// Lấy danh sách ứng viên có thể mời vào quỹ.
+  Future<Map<String, dynamic>> fetchFundCandidates({
+    required String fundId,
+    String? query,
+  }) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.fundCandidates(
+      token: token,
+      fundId: fundId,
+      query: query,
+    );
+  }
+
+  /// Gửi lời mời tham gia quỹ.
+  Future<Map<String, dynamic>> sendFundInvite({
+    required String fundId,
+    String? inviteeId,
+    String? phoneNumber,
+    String? name,
+  }) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.sendFundInvite(
+      token: token,
+      fundId: fundId,
+      inviteeId: inviteeId,
+      phoneNumber: phoneNumber,
+      name: name,
+    );
+  }
+
+  /// Lấy danh sách lời mời nhận được.
+  Future<Map<String, dynamic>> fetchMyInvitations({String? status}) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.myInvitations(token: token, status: status);
+  }
+
+  /// Chấp nhận lời mời tham gia quỹ.
+  Future<Map<String, dynamic>> acceptInvitation(String invitationId) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.acceptInvitation(
+      token: token,
+      invitationId: invitationId,
+    );
+  }
+
+  /// Từ chối lời mời tham gia quỹ.
+  Future<Map<String, dynamic>> rejectInvitation(String invitationId) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.rejectInvitation(
+      token: token,
+      invitationId: invitationId,
+    );
+  }
+
+  /// Lấy danh sách thông báo và số lượng chưa đọc.
+  Future<Map<String, dynamic>> fetchNotifications() {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.notifications(token);
+  }
+
+  /// Đánh dấu thông báo đã đọc.
+  Future<Map<String, dynamic>> markNotificationRead(String notificationId) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.markNotificationRead(
+      token: token,
+      notificationId: notificationId,
+    );
+  }
+
+  /// Đánh dấu tất cả thông báo đã đọc.
+  Future<Map<String, dynamic>> markAllNotificationsRead() {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.markAllNotificationsRead(token);
+  }
+
+  /// Lấy danh sách tất cả tài khoản người dùng (chỉ dành cho Admin).
+  Future<Map<String, dynamic>> fetchAdminUsers({String? search}) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.adminUsers(token, search: search);
   }
 }
 

@@ -7,6 +7,7 @@ import '../widgets/app_button.dart';
 import '../widgets/back_label.dart';
 import 'contribute_fund_screen.dart';
 import 'home_screen.dart' show formatVnd;
+import 'invite_member_screen.dart';
 
 /// Màn hình Chi tiết quỹ (Có giao diện riêng khi ấn vào quỹ tương ứng)
 class FundDetailScreen extends StatefulWidget {
@@ -90,6 +91,33 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
       }
       _loadDetails();
     }
+  }
+
+  /// Mở màn hình Mời thành viên - Use Case 06
+  void _openInviteScreen() {
+    final fundType = _fund['fundType']?.toString() ?? '';
+    if (fundType == 'Cá nhân') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(child: Text('Quỹ cá nhân không thể mời thành viên')),
+            ],
+          ),
+          backgroundColor: Color(0xFFC62828),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => InviteMemberScreen(fund: _fund),
+      ),
+    );
   }
 
   String _formatDate(dynamic dateVal) {
@@ -348,13 +376,36 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                             ),
                             const SizedBox(height: 16),
 
-                            // NÚT "+ GÓP QUỸ" - Trigger Use Case 05
-                            AppButton(
-                              text: '+ Góp quỹ',
-                              icon: Icons.add_circle_outline_rounded,
-                              height: 48,
-                              fontSize: 15,
-                              onPressed: _openContributeScreen,
+                            // Các nút hành động: + Góp quỹ (UC 05) & Mời thành viên (UC 06)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: AppButton(
+                                    text: '+ Góp quỹ',
+                                    icon: Icons.add_circle_outline_rounded,
+                                    height: 48,
+                                    fontSize: 14.5,
+                                    onPressed: _openContributeScreen,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.lightBlue,
+                                      side: const BorderSide(color: AppColors.lightBlue, width: 1.4),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      minimumSize: const Size(0, 48),
+                                    ),
+                                    icon: const Icon(Icons.person_add_rounded, size: 19),
+                                    label: const Text(
+                                      'Mời thành viên',
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                    ),
+                                    onPressed: _openInviteScreen,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 20),
 

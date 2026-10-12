@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/back_label.dart';
 import '../widgets/error_message.dart';
+import 'admin_users_screen.dart';
 import 'change_password_screen.dart';
 import 'login_screen.dart';
 
@@ -351,24 +352,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          // Badge thành viên
+                          // Badge thành viên / Admin
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.lightBlue.withValues(alpha: 0.1),
+                              color: (user?.isAdmin == true ? Colors.deepPurple : AppColors.lightBlue).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(Icons.verified_rounded, size: 15, color: AppColors.lightBlue),
-                                SizedBox(width: 4),
+                              children: [
+                                Icon(
+                                  user?.isAdmin == true ? Icons.admin_panel_settings_rounded : Icons.verified_rounded,
+                                  size: 15,
+                                  color: user?.isAdmin == true ? Colors.deepPurple : AppColors.lightBlue,
+                                ),
+                                const SizedBox(width: 4),
                                 Text(
-                                  'Tài khoản đã xác thực',
+                                  user?.isAdmin == true ? 'Quản trị viên (Admin)' : 'Tài khoản đã xác thực',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: AppColors.lightBlue,
+                                    color: user?.isAdmin == true ? Colors.deepPurple : AppColors.lightBlue,
                                   ),
                                 ),
                               ],
@@ -492,8 +497,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onTap: () {
                               openChangePasswordScreen(context);
                             },
-                            isBottom: true,
+                            isBottom: !(user?.isAdmin == true),
                           ),
+                          if (user?.isAdmin == true) ...[
+                            const Divider(height: 1, indent: 64, endIndent: 16, color: AppColors.border),
+                            _menuRow(
+                              icon: Icons.admin_panel_settings_rounded,
+                              iconColor: const Color(0xFFE65100),
+                              title: 'Danh sách tài khoản',
+                              subtitle: 'Quản trị & xem danh sách người dùng',
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFF3E0),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFFFFB74D)),
+                                    ),
+                                    child: const Text(
+                                      'Admin',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFE65100),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+                                ],
+                              ),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                                );
+                              },
+                              isBottom: true,
+                            ),
+                          ],
                         ],
                       ),
                     ),

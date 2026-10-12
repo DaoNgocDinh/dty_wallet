@@ -7,6 +7,7 @@ class AuthUser {
     required this.name,
     required this.email,
     this.walletBalance = 0,
+    this.role = 'user',
     this.createdAt,
     this.hasPin = false,
   });
@@ -16,6 +17,7 @@ class AuthUser {
     name: json['name'] as String? ?? '',
     email: json['email'] as String? ?? '',
     walletBalance: (json['walletBalance'] as num?)?.toDouble() ?? 0,
+    role: json['role'] as String? ?? 'user',
     createdAt: json['createdAt'] as String?,
     hasPin: json['hasPin'] as bool? ?? false,
   );
@@ -24,8 +26,11 @@ class AuthUser {
   final String name;
   final String email;
   final double walletBalance;
+  final String role;
   final String? createdAt;
   final bool hasPin;
+
+  bool get isAdmin => role == 'admin' || name.trim().toLowerCase() == 'admin';
 }
 
 class AuthResult {
@@ -236,4 +241,82 @@ class AuthService {
           'content': ?content,
         },
       );
+
+  /// Lấy danh sách ứng viên có thể mời vào quỹ (hoặc tìm kiếm theo query).
+  Future<Map<String, dynamic>> fundCandidates({
+    required String token,
+    required String fundId,
+    String? query,
+  }) {
+    final queryParam = (query != null && query.trim().isNotEmpty)
+        ? '?query=${Uri.encodeComponent(query.trim())}'
+        : '';
+    return _client.get('/funds/$fundId/candidates$queryParam', token: token);
+  }
+
+  /// Gửi lời mời tham gia quỹ.
+  Future<Map<String, dynamic>> sendFundInvite({
+    required String token,
+    required String fundId,
+    String? inviteeId,
+    String? phoneNumber,
+    String? name,
+  }) =>
+      _client.post(
+        '/funds/$fundId/invitations',
+        token: token,
+        body: {
+          if (inviteeId != null) 'inviteeId': inviteeId,
+          if (phoneNumber != null) 'phoneNumber': phoneNumber,
+          if (name != null) 'name': name,
+        },
+      );
+
+  /// Lấy danh sách lời mời nhận được.
+  Future<Map<String, dynamic>> myInvitations({
+    required String token,
+    String? status,
+  }) {
+    final queryParam = (status != null && status.isNotEmpty)
+        ? '?status=${Uri.encodeComponent(status)}'
+        : '';
+    return _client.get('/invitations$queryParam', token: token);
+  }
+
+  /// Chấp nhận lời mời tham gia quỹ.
+  Future<Map<String, dynamic>> acceptInvitation({
+    required String token,
+    required String invitationId,
+  }) =>
+      _client.post('/invitations/$invitationId/accept', token: token);
+
+  /// Từ chối lời mời tham gia quỹ.
+  Future<Map<String, dynamic>> rejectInvitation({
+    required String token,
+    required String invitationId,
+  }) =>
+      _client.post('/invitations/$invitationId/reject', token: token);
+
+  /// Lấy danh sách thông báo và số lượng chưa đọc.
+  Future<Map<String, dynamic>> notifications(String token) =>
+      _client.get('/notifications', token: token);
+
+  /// Đánh dấu thông báo đã đọc.
+  Future<Map<String, dynamic>> markNotificationRead({
+    required String token,
+    required String notificationId,
+  }) =>
+      _client.put('/notifications/$notificationId/read', token: token);
+
+  /// Đánh dấu tất cả thông báo đã đọc.
+  Future<Map<String, dynamic>> markAllNotificationsRead(String token) =>
+      _client.put('/notifications/read-all', token: token);
+
+  /// Lấy danh sách tất cả tài khoản người dùng (chỉ dành cho Admin).
+  Future<Map<String, dynamic>> adminUsers(String token, {String? search}) {
+    final queryParam = (search != null && search.trim().isNotEmpty)
+        ? '?search=${Uri.encodeComponent(search.trim())}'
+        : '';
+    return _client.get('/admin/users$queryParam', token: token);
+  }
 }

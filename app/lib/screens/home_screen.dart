@@ -5,8 +5,9 @@ import '../state/app_session.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_logo.dart';
-import 'create_fund_screen.dart';
+import 'admin_users_screen.dart';
 import 'funds_screen.dart';
+import 'notifications_sheet.dart';
 import 'profile_screen.dart';
 
 /// Hàm định dạng tiền tệ VND: 0 -> '0 đ', 1000000 -> '1.000.000 đ'
@@ -43,6 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _walletError;
   bool _loadedWallet = false;
   bool _isBalanceHidden = false;
+  int _unreadNotificationCount = 0;
+  bool _loadedNotifications = false;
 
   @override
   void didChangeDependencies() {
@@ -54,6 +57,28 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!_loadedWallet) {
       _loadedWallet = true;
       _loadWallet();
+    }
+    if (!_loadedNotifications) {
+      _loadedNotifications = true;
+      _loadNotifications();
+    }
+  }
+
+  /// Gọi API lấy số thông báo chưa đọc
+  Future<void> _loadNotifications() async {
+    try {
+      final res = await AppScope.of(context).fetchNotifications();
+      if (!mounted) return;
+      final unread = res['unreadCount'] as num? ?? 0;
+      setState(() => _unreadNotificationCount = unread.toInt());
+    } catch (_) {}
+  }
+
+  /// Mở giao diện thông báo
+  Future<void> _openNotifications(BuildContext context) async {
+    await NotificationsSheet.show(context);
+    if (mounted) {
+      _loadNotifications();
     }
   }
 
@@ -687,8 +712,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _showFundsSheet(BuildContext context) => _openFundsScreen(context);
-
   // --- 6. Bottom Sheet: Hũ chi tiêu ---
   void _showJarsSheet(BuildContext context) {
     showModalBottomSheet<void>(
@@ -804,43 +827,155 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  // Nút Trang cá nhân hình vuông tròn (Squircle Profile Button)
-                  Semantics(
-                    button: true,
-                    label: 'Trang cá nhân',
-                    child: Tooltip(
-                      message: 'Trang cá nhân',
-                      child: InkWell(
-                        onTap: () => openProfileScreen(context),
-                        borderRadius: BorderRadius.circular(13),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(13),
-                            border: Border.all(
-                              color: AppColors.lightBlue.withValues(alpha: 0.4),
-                              width: 1.4,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.lightBlue.withValues(
-                                  alpha: 0.15,
+                  Row(
+                    children: [
+                      // Nút Quản trị viên (chỉ hiển thị khi role == 'admin', các role khác ẩn đi)
+                      if (user?.isAdmin == true) ...[
+                        Semantics(
+                          button: true,
+                          label: 'Danh sách tài khoản',
+                          child: Tooltip(
+                            message: 'Danh sách tài khoản (Admin)',
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const AdminUsersScreen(),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(13),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF3E0),
+                                  borderRadius: BorderRadius.circular(13),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFB74D),
+                                    width: 1.4,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.orange.withValues(alpha: 0.15),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                                child: const Icon(
+                                  Icons.admin_panel_settings_rounded,
+                                  color: Color(0xFFE65100),
+                                  size: 22,
+                                ),
                               ),
-                            ],
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.person_rounded,
-                            color: AppColors.lightBlue,
-                            size: 23,
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+
+                      // Nút Chuông Thông báo cạnh Avatar
+                      Semantics(
+                        button: true,
+                        label: 'Thông báo',
+                        child: Tooltip(
+                          message: 'Thông báo',
+                          child: InkWell(
+                            onTap: () => _openNotifications(context),
+                            borderRadius: BorderRadius.circular(13),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(13),
+                                border: Border.all(
+                                  color: AppColors.lightBlue.withValues(alpha: 0.4),
+                                  width: 1.4,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.lightBlue.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.notifications_rounded,
+                                    color: AppColors.lightBlue,
+                                    size: 23,
+                                  ),
+                                  if (_unreadNotificationCount > 0)
+                                    Positioned(
+                                      top: 6,
+                                      right: 6,
+                                      child: Container(
+                                        width: 9,
+                                        height: 9,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE53935),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+
+                      // Nút Trang cá nhân hình vuông tròn (Squircle Profile Button)
+                      Semantics(
+                        button: true,
+                        label: 'Trang cá nhân',
+                        child: Tooltip(
+                          message: 'Trang cá nhân',
+                          child: InkWell(
+                            onTap: () => openProfileScreen(context),
+                            borderRadius: BorderRadius.circular(13),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(13),
+                                border: Border.all(
+                                  color: AppColors.lightBlue.withValues(alpha: 0.4),
+                                  width: 1.4,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.lightBlue.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.person_rounded,
+                                color: AppColors.lightBlue,
+                                size: 23,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1172,9 +1307,28 @@ class _HomeScreenState extends State<HomeScreen> {
                                 iconColor: const Color(0xFF00838F),
                                 onTap: () => _showJarsSheet(context),
                               ),
+                              if (user?.isAdmin == true)
+                                _featureButton(
+                                  label: 'DS tài khoản',
+                                  icon: Icons.admin_panel_settings_rounded,
+                                  iconColor: const Color(0xFFE65100),
+                                  hasBorder: true,
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const AdminUsersScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
                             ],
                           ),
                         ),
+
+                        if (user?.isAdmin == true) ...[
+                          const SizedBox(height: 16),
+                          _buildAdminSection(context),
+                        ],
 
                         const SizedBox(height: 16),
 
@@ -1194,6 +1348,103 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Banner Quản trị viên (chỉ hiển thị khi role == 'admin')
+  Widget _buildAdminSection(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFFB74D)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.orange.withValues(alpha: 0.1),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE65100),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.admin_panel_settings_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Bảng điều khiển Quản trị viên',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFE65100),
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Xem danh sách tài khoản & tra cứu người dùng',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF8D6E63),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE65100),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Xem ngay',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 3),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: Colors.white,
+                    size: 10,
+                  ),
+                ],
               ),
             ),
           ],
