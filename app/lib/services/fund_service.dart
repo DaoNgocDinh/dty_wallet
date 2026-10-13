@@ -11,12 +11,15 @@ class FundService {
       _client.get('/funds', token: token);
 
   /// Tạo một quỹ mới (Use Case 04).
+  /// Với quỹ "Cặp đôi" bắt buộc phải truyền [partnerId] là người dùng khác
+  /// được chọn ngay từ lúc lập quỹ.
   Future<Map<String, dynamic>> createFund({
     required String token,
     required String name,
     required String fundType,
     double? targetAmount,
     DateTime? completionDate,
+    String? partnerId,
   }) =>
       _client.post(
         '/funds',
@@ -27,6 +30,7 @@ class FundService {
           if (targetAmount != null) 'targetAmount': targetAmount,
           if (completionDate != null)
             'completionDate': completionDate.toIso8601String(),
+          if (partnerId != null && partnerId.isNotEmpty) 'partnerId': partnerId,
         },
       );
 
@@ -67,7 +71,34 @@ class FundService {
         },
       );
 
-  /// Lấy danh sách ứng viên có thể mời vào quỹ (hoặc tìm kiếm theo query) (Use Case 06).
+  /// Rút tiền từ quỹ về ví cá nhân (chỉ chủ quỹ).
+  Future<Map<String, dynamic>> withdrawFund({
+    required String token,
+    required String fundId,
+    required double amount,
+    String? note,
+  }) =>
+      _client.post(
+        '/funds/$fundId/withdraw',
+        token: token,
+        body: {
+          'amount': amount,
+          if (note != null && note.isNotEmpty) 'note': note,
+        },
+      );
+
+/// Danh sách người dùng để chọn làm người cùng lập quỹ cặp đôi.
+  Future<Map<String, dynamic>> partnerCandidates({
+    required String token,
+    String? query,
+  }) {
+    final queryParam = (query != null && query.trim().isNotEmpty)
+        ? '?query=${Uri.encodeComponent(query.trim())}'
+        : '';
+    return _client.get('/funds/partner-candidates$queryParam', token: token);
+  }
+
+/// Lấy danh sách ứng viên có thể mời vào quỹ (hoặc tìm kiếm theo query) (Use Case 06).
   Future<Map<String, dynamic>> fundCandidates({
     required String token,
     required String fundId,

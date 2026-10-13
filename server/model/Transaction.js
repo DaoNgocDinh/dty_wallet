@@ -7,7 +7,7 @@ var transactionSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['fund_contribution', 'jar_contribution', 'mobile_topup', 'data_topup', 'bill_payment', 'wallet_deposit']
+    enum: ['fund_contribution', 'fund_withdrawal', 'jar_contribution', 'mobile_topup', 'data_topup', 'bill_payment', 'wallet_deposit']
   },
   amount: { type: Number, required: true, min: 0 },
   sender: { type: String, default: '' },

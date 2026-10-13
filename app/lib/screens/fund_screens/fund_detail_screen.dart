@@ -8,6 +8,7 @@ import '../../widgets/back_label.dart';
 import '../home_screen.dart' show formatVnd;
 import 'contribute_fund_screen.dart';
 import 'invite_member_screen.dart';
+import 'withdraw_fund_screen.dart';
 
 /// Màn hình Chi tiết quỹ (Có giao diện riêng khi ấn vào quỹ tương ứng)
 class FundDetailScreen extends StatefulWidget {
@@ -93,6 +94,22 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
     }
   }
 
+  /// Mở màn hình Rút tiền từ quỹ (chỉ chủ quỹ)
+  Future<void> _openWithdrawScreen() async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => WithdrawFundScreen(fund: _fund),
+      ),
+    );
+
+    if (result != null) {
+      if (result is Map<String, dynamic>) {
+        setState(() => _fund = result);
+      }
+      _loadDetails();
+    }
+  }
+
   /// Mở màn hình Mời thành viên - Use Case 06
   void _openInviteScreen() {
     final fundType = _fund['fundType']?.toString() ?? '';
@@ -113,11 +130,56 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
       return;
     }
 
+    // Quỹ cặp đôi chỉ có tối đa 2 người dùng
+    if (fundType == 'Cặp đôi') {
+      if (_fundStatus == 'pending_partner') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.info_outline_rounded, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('Quỹ cặp đôi đang chờ người được chọn đồng ý')),
+              ],
+            ),
+            backgroundColor: Color(0xFFC62828),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      if (_members.length >= 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.info_outline_rounded, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('Quỹ cặp đôi chỉ có 2 người dùng')),
+              ],
+            ),
+            backgroundColor: Color(0xFFC62828),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => InviteMemberScreen(fund: _fund),
       ),
     );
+  }
+
+  String get _fundStatus => _fund['status']?.toString() ?? 'active';
+
+  /// Quỹ cặp đôi chỉ được có tối đa 2 người dùng
+  bool get _canInviteMore {
+    if (_fund['fundType']?.toString() != 'Cặp đôi') return true;
+    if (_fundStatus == 'pending_partner') return false;
+    return _members.length < 2;
   }
 
   String get _ownerId {
@@ -181,6 +243,22 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
   /// Xác nhận và xoá quỹ (Chỉ dành cho Chủ quỹ)
   Future<void> _confirmDeleteFund() async {
     final fundName = _fund['name']?.toString() ?? 'quỹ này';
+    final currentAmount = (_fund['currentAmount'] as num?)?.toDouble() ?? 0;
+
+    // Quỹ chỉ được xoá khi số dư còn 0đ
+    if (currentAmount > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Chỉ được xoá quỹ khi số dư quỹ bằng 0. Quỹ đang có ${formatVnd(currentAmount)}',
+          ),
+          backgroundColor: const Color(0xFFC62828),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -241,7 +319,11 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.message),
+          content: Text(
+            e.code == 'FUND_NOT_EMPTY'
+                ? 'Chỉ được xoá quỹ khi số dư quỹ bằng 0'
+                : e.message,
+          ),
           backgroundColor: const Color(0xFFC62828),
           behavior: SnackBarBehavior.floating,
         ),
@@ -584,6 +666,39 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                             ),
                             const SizedBox(height: 16),
 
+                            // Quỹ cặp đôi đang chờ người được chọn đồng ý
+                            if (_fundStatus == 'pending_partner') ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF8E1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFFFE082)),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.hourglass_top_rounded,
+                                      color: Color(0xFFF57F17),
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Quỹ cặp đôi đang chờ người được chọn đồng ý',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFFF57F17),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+
                             // Các nút hành động
                             Row(
                               children: [
@@ -610,11 +725,32 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                       'Mời thành viên',
                                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                                     ),
-                                    onPressed: _openInviteScreen,
+                                    onPressed: _canInviteMore ? _openInviteScreen : null,
                                   ),
                                 ),
                               ],
                             ),
+
+                            // Nút Rút tiền (chỉ chủ quỹ và quỹ đang có tiền)
+                            if (isOwner) ...[
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                key: const ValueKey('withdraw_fund_button'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF2E7D32),
+                                  side: const BorderSide(color: Color(0xFFA5D6A7), width: 1.2),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  minimumSize: const Size(double.infinity, 42),
+                                  backgroundColor: const Color(0xFFE8F5E9).withValues(alpha: 0.6),
+                                ),
+                                icon: const Icon(Icons.savings_outlined, size: 19),
+                                label: const Text(
+                                  'Rút tiền về ví',
+                                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                                ),
+                                onPressed: currentAmount > 0 ? _openWithdrawScreen : null,
+                              ),
+                            ],
 
                             // Nút Xoá quỹ (Chủ quỹ) hoặc Rời quỹ (Thành viên)
                             if (isOwner) ...[
@@ -622,16 +758,32 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                               OutlinedButton.icon(
                                 key: const ValueKey('delete_fund_button'),
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFFC62828),
-                                  side: const BorderSide(color: Color(0xFFEF9A9A), width: 1.2),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  foregroundColor: currentAmount > 0
+                                      ? Colors.grey.shade500
+                                      : const Color(0xFFC62828),
+                                  side: BorderSide(
+                                    color: currentAmount > 0
+                                        ? Colors.grey.shade300
+                                        : const Color(0xFFEF9A9A),
+                                    width: 1.2,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   minimumSize: const Size(double.infinity, 42),
-                                  backgroundColor: const Color(0xFFFFEBEE).withValues(alpha: 0.5),
+                                  backgroundColor: currentAmount > 0
+                                      ? Colors.grey.shade100
+                                      : const Color(0xFFFFEBEE).withValues(alpha: 0.5),
                                 ),
                                 icon: const Icon(Icons.delete_outline_rounded, size: 19),
-                                label: const Text(
-                                  'Xoá quỹ này',
-                                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                                label: Text(
+                                  currentAmount > 0
+                                      ? 'Rút hết tiền mới xoá được quỹ'
+                                      : 'Xoá quỹ này',
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 onPressed: _confirmDeleteFund,
                               ),
@@ -853,13 +1005,13 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
 
                             const SizedBox(height: 20),
 
-                            // Tiêu đề Lịch sử đóng góp
+                            // Tiêu đề Lịch sử giao dịch của quỹ
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Expanded(
                                   child: Text(
-                                    'Lịch sử đóng góp',
+                                    'Lịch sử giao dịch',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -911,7 +1063,7 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                     ),
                                     SizedBox(height: 8),
                                     Text(
-                                      'Chưa có giao dịch đóng góp nào',
+                                      'Chưa có giao dịch nào với quỹ',
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: AppColors.textSecondary,
@@ -933,6 +1085,8 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                   final sender = txn['sender']?.toString() ?? 'Thành viên';
                                   final note = txn['note']?.toString() ?? '';
                                   final date = _formatDate(txn['createdAt']);
+                                  final isWithdrawal =
+                                      txn['type']?.toString() == 'fund_withdrawal';
 
                                   return Container(
                                     padding: const EdgeInsets.all(12),
@@ -946,12 +1100,19 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                         Container(
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                                            color: (isWithdrawal
+                                                    ? const Color(0xFFC62828)
+                                                    : const Color(0xFF2E7D32))
+                                                .withValues(alpha: 0.1),
                                             shape: BoxShape.circle,
                                           ),
-                                          child: const Icon(
-                                            Icons.arrow_downward_rounded,
-                                            color: Color(0xFF2E7D32),
+                                          child: Icon(
+                                            isWithdrawal
+                                                ? Icons.arrow_upward_rounded
+                                                : Icons.arrow_downward_rounded,
+                                            color: isWithdrawal
+                                                ? const Color(0xFFC62828)
+                                                : const Color(0xFF2E7D32),
                                             size: 18,
                                           ),
                                         ),
@@ -960,12 +1121,40 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                sender,
-                                                style: const TextStyle(
-                                                  fontSize: 13.5,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                                              Row(
+                                                children: [
+                                                  Flexible(
+                                                    child: Text(
+                                                      sender,
+                                                      style: const TextStyle(
+                                                        fontSize: 13.5,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  if (isWithdrawal) ...[
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 1.5,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFFFEBEE),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: const Text(
+                                                        'Rút tiền',
+                                                        style: TextStyle(
+                                                          fontSize: 10.5,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Color(0xFFC62828),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
                                               ),
                                               if (note.isNotEmpty) ...[
                                                 const SizedBox(height: 2),
@@ -975,6 +1164,7 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                                     fontSize: 12,
                                                     color: AppColors.textSecondary,
                                                   ),
+                                                  overflow: TextOverflow.ellipsis,
                                                 ),
                                               ],
                                               if (date.isNotEmpty) ...[
@@ -991,11 +1181,13 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                           ),
                                         ),
                                         Text(
-                                          '+${formatVnd(amt)}',
-                                          style: const TextStyle(
+                                          '${isWithdrawal ? '-' : '+'}${formatVnd(amt)}',
+                                          style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
-                                            color: Color(0xFF2E7D32),
+                                            color: isWithdrawal
+                                                ? const Color(0xFFC62828)
+                                                : const Color(0xFF2E7D32),
                                           ),
                                         ),
                                       ],

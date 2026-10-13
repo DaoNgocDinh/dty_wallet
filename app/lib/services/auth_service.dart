@@ -136,12 +136,14 @@ class AuthService {
       _fundService.funds(token);
 
   /// Tạo quỹ mới (Ủy quyền qua FundService).
+  /// Quỹ "Cặp đôi" bắt buộc phải có [partnerId].
   Future<Map<String, dynamic>> createFund({
     required String token,
     required String name,
     required String fundType,
     double? targetAmount,
     DateTime? completionDate,
+    String? partnerId,
   }) =>
       _fundService.createFund(
         token: token,
@@ -149,6 +151,7 @@ class AuthService {
         fundType: fundType,
         targetAmount: targetAmount,
         completionDate: completionDate,
+        partnerId: partnerId,
       );
 
   /// Xoá quỹ theo ID (Ủy quyền qua FundService).
@@ -186,7 +189,28 @@ class AuthService {
         note: note,
       );
 
-  /// Lấy danh sách hũ chi tiêu.
+  /// Rút tiền từ quỹ về ví cá nhân (Ủy quyền qua FundService).
+  Future<Map<String, dynamic>> withdrawFund({
+    required String token,
+    required String fundId,
+    required double amount,
+    String? note,
+  }) =>
+      _fundService.withdrawFund(
+        token: token,
+        fundId: fundId,
+        amount: amount,
+        note: note,
+      );
+
+/// Danh sách người dùng để chọn làm người cùng lập quỹ cặp đôi.
+  Future<Map<String, dynamic>> partnerCandidates({
+    required String token,
+    String? query,
+  }) =>
+      _fundService.partnerCandidates(token: token, query: query);
+
+/// Lấy danh sách hũ chi tiêu.
   Future<Map<String, dynamic>> spendingJars(String token) =>
       _client.get('/spending-jars', token: token);
 

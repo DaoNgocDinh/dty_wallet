@@ -4,7 +4,9 @@ var FundInvitation = require('../model/FundInvitation');
 var Notification = require('../model/Notification');
 var Transaction = require('../model/Transaction');
 var User = require('../model/User');
+var fundRules = require('../utils/fundRules');
 var crypto = require('crypto');
+var mongoose = require('mongoose');
 
 exports.list = async function(req, res) {
   var funds = await Fund.find({
@@ -74,6 +76,16 @@ exports.create = async function(req, res) {
     }
   }
 
+  // Quỹ cặp đôi: bắt buộc phải chọn người dùng khác ngay từ lúc lập quỹ
+  var partner = null;
+  if (fundType === fundRules.COUPLE_FUND_TYPE) {
+    var lookup = await resolvePartner(req);
+    if (lookup.error) {
+      return res.status(400).json(lookup.error);
+    }
+    partner = lookup.user;
+  }
+
   var fund = await Fund.create({
     userId: req.user.id,
     name: name,
@@ -81,12 +93,159 @@ exports.create = async function(req, res) {
     targetAmount: targetAmount,
     completionDate: completionDate,
     currentAmount: 0,
+    status: partner ? 'pending_partner' : 'active',
     members: [{ userId: req.user.id, role: 'owner', joinedAt: new Date() }]
   });
 
+  // Quỹ cặp đôi chỉ được lập chính thức khi người được chọn đồng ý tham gia
+  var invitation = null;
+  if (partner) {
+    invitation = await FundInvitation.create({
+      fundId: fund._id,
+      fundName: fund.name,
+      fundType: fund.fundType,
+      inviterId: req.user.id,
+      inviterName: req.user.name || req.user.email,
+      inviteeId: partner._id,
+      inviteeName: partner.name,
+      inviteePhone: partner.phoneNumber || '',
+      status: 'pending'
+    });
+
+    await Notification.create({
+      userId: partner._id,
+      title: 'Lời mời lập quỹ cặp đôi',
+      message: (req.user.name || req.user.email) + ' đã mời bạn lập quỹ cặp đôi "' + fund.name + '"',
+      type: 'fund_invitation',
+      metadata: {
+        invitationId: invitation._id,
+        fundId: fund._id,
+        fundName: fund.name,
+        fundType: fund.fundType,
+        inviterName: req.user.name || req.user.email
+      }
+    });
+  }
+
   var result = fund.toObject();
-  result.message = 'Tạo quỹ thành công';
+  result.message = partner
+    ? 'Đã gửi lời mời, quỹ cặp đôi sẽ được lập khi người được chọn đồng ý'
+    : 'Tạo quỹ thành công';
+  if (partner) {
+    result.status = 'pending_partner';
+    result.invitation = invitation;
+    result.partner = {
+      id: partner._id,
+      name: partner.name,
+      email: partner.email,
+      phoneNumber: partner.phoneNumber || ''
+    };
+  }
   res.status(201).json(result);
+};
+
+// Tìm người dùng được chọn làm người cùng lập quỹ cặp đôi
+async function resolvePartner(req) {
+  var partnerId = req.body.partnerId || req.body.inviteeId;
+  var partnerPhone = req.body.partnerPhoneNumber || req.body.phoneNumber || req.body.phone;
+  var partnerName = req.body.partnerName;
+
+  if (!partnerId && !partnerPhone && !partnerName) {
+    return {
+      error: {
+        error: 'Vui lòng chọn người dùng khác để lập quỹ cặp đôi',
+        field: 'partnerId',
+        code: 'PARTNER_REQUIRED'
+      }
+    };
+  }
+
+  var targetUser = null;
+  if (partnerId) {
+    targetUser = await User.findById(partnerId);
+  } else if (partnerPhone) {
+    targetUser = await User.findOne({ phoneNumber: String(partnerPhone).trim() });
+  } else if (partnerName) {
+    targetUser = await User.findOne({ name: String(partnerName).trim() });
+  }
+
+  if (!targetUser) {
+    return {
+      error: {
+        error: 'Người dùng chưa đăng ký tài khoản ví điện tử hoặc không tồn tại',
+        code: 'USER_NOT_FOUND'
+      }
+    };
+  }
+
+  if (targetUser._id.toString() === req.user.id.toString()) {
+    return {
+      error: {
+        error: 'Bạn không thể chọn chính mình làm người cùng lập quỹ',
+        code: 'CANNOT_INVITE_SELF'
+      }
+    };
+  }
+
+  if (targetUser.role === 'admin' || (targetUser.name && targetUser.name.toLowerCase() === 'admin')) {
+    return {
+      error: {
+        error: 'Không thể chọn tài khoản quản trị viên',
+        code: 'CANNOT_INVITE_ADMIN'
+      }
+    };
+  }
+
+  return { user: targetUser };
+}
+
+// Danh sách người dùng có thể chọn làm người cùng lập quỹ cặp đôi
+exports.partnerCandidates = async function(req, res) {
+  var query = req.query.query !== undefined && req.query.query !== null ? String(req.query.query).trim() : '';
+
+  var userFilter = {
+    _id: { $ne: req.user.id },
+    role: { $ne: 'admin' },
+    name: { $not: /^admin$/i }
+  };
+
+  if (query) {
+    var escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var regex = new RegExp(escaped, 'i');
+    userFilter.$or = [
+      { name: regex },
+      { phoneNumber: regex },
+      { email: regex }
+    ];
+  }
+
+  var users = await User.find(userFilter).limit(30).select('name email phoneNumber role');
+  users = users.filter(function(u) {
+    var e = String(u.email || '').trim().toLowerCase();
+    return e.indexOf('admin@') !== 0;
+  });
+
+  var list = users.map(function(u) {
+    return {
+      id: u._id,
+      _id: u._id,
+      name: u.name,
+      email: u.email,
+      phoneNumber: u.phoneNumber || ''
+    };
+  });
+
+  if (query && list.length === 0) {
+    return res.status(200).json({
+      count: 0,
+      data: [],
+      error: 'Không tìm thấy người dùng phù hợp',
+      message: 'Không tìm thấy người dùng phù hợp',
+      code: 'NO_USER_FOUND'
+    });
+  }
+
+  res.json({ count: list.length, data: list });
 };
 
 exports.details = async function(req, res) {
@@ -123,14 +282,135 @@ exports.details = async function(req, res) {
     });
   }
 
+  // metadata.fundId có thể được lưu dưới dạng chuỗi hoặc ObjectId tuỳ phiên bản ghi
   var transactions = await Transaction.find({
-    'metadata.fundId': fund.id
+    $or: [
+      { 'metadata.fundId': fund.id },
+      { 'metadata.fundId': fund._id }
+    ]
   }).sort({ createdAt: -1 });
+
+  var isOwner = fundRules.isFundOwner(fund, req.user.id);
+  fundObj.isOwner = isOwner;
+  // Quỹ chỉ được xoá khi số dư còn 0đ
+  fundObj.canDelete = isOwner && Number(fundObj.currentAmount || 0) === 0;
+  // Chỉ chủ quỹ được rút tiền từ quỹ
+  fundObj.canWithdraw = isOwner && Number(fundObj.currentAmount || 0) > 0;
 
   res.json({
     fund: fundObj,
     transactions: transactions
   });
+};
+
+// Rút tiền từ quỹ về ví cá nhân (chỉ chủ quỹ)
+exports.withdraw = async function(req, res) {
+  var fundId = String(req.params.id || '');
+  if (!mongoose.Types.ObjectId.isValid(fundId)) {
+    return res.status(404).json({ error: 'Quỹ không tồn tại', code: 'FUND_NOT_FOUND' });
+  }
+
+  var fund = await Fund.findById(fundId);
+  if (!fund) {
+    return res.status(404).json({ error: 'Quỹ không tồn tại', code: 'FUND_NOT_FOUND' });
+  }
+
+  // Chỉ chủ quỹ mới được rút tiền
+  if (!fundRules.isFundOwner(fund, req.user.id)) {
+    return res.status(403).json({
+      error: 'Chỉ chủ quỹ mới được rút tiền',
+      code: 'NOT_FUND_OWNER'
+    });
+  }
+
+  var rawAmount = req.body.amount;
+  if (rawAmount === undefined || rawAmount === null || String(rawAmount).trim() === '') {
+    return res.status(400).json({ error: 'Vui lòng nhập số tiền muốn rút', code: 'AMOUNT_REQUIRED' });
+  }
+
+  var amountStr = String(rawAmount).trim().replace(/,/g, '');
+  if (!/^\d+(\.\d+)?$/.test(amountStr)) {
+    return res.status(400).json({ error: 'Số tiền không hợp lệ', code: 'INVALID_AMOUNT' });
+  }
+
+  var amount = Number(amountStr);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'Số tiền không hợp lệ', code: 'INVALID_AMOUNT' });
+  }
+
+  if (amount < 1000) {
+    return res.status(400).json({ error: 'Tối thiểu 1000đ', code: 'MIN_AMOUNT_1000' });
+  }
+
+  // Số tiền rút không được vượt quá số dư của quỹ
+  if (amount > Number(fund.currentAmount || 0)) {
+    return res.status(400).json({
+      error: 'Số dư quỹ không đủ để rút',
+      code: 'INSUFFICIENT_FUND_BALANCE',
+      currentAmount: fund.currentAmount
+    });
+  }
+
+  var note = String(req.body.note || '').trim();
+  if (note) {
+    var words = note.split(/\s+/).filter(Boolean);
+    if (words.length > 200) {
+      return res.status(400).json({ error: 'Tối đa 200 từ', code: 'NOTE_TOO_LONG' });
+    }
+  }
+
+  var user = await User.findById(req.user.id);
+  if (!user) {
+    return res.status(404).json({ error: 'Người dùng không tồn tại' });
+  }
+
+  // Trừ tiền khỏi quỹ (kèm điều kiện currentAmount >= amount để không rút quá số dư)
+  var updatedFund = await Fund.findOneAndUpdate(
+    { _id: fund._id, currentAmount: { $gte: amount } },
+    { $inc: { currentAmount: -amount } },
+    { new: true }
+  );
+  if (!updatedFund) {
+    return res.status(400).json({
+      error: 'Số dư quỹ không đủ để rút',
+      code: 'INSUFFICIENT_FUND_BALANCE',
+      currentAmount: fund.currentAmount
+    });
+  }
+
+  try {
+    // Cộng tiền vào ví cá nhân của chủ quỹ
+    var credited = await User.findOneAndUpdate(
+      { _id: user._id },
+      { $inc: { walletBalance: amount } },
+      { new: true }
+    );
+
+    var txn = await Transaction.create({
+      transactionCode: code(),
+      userId: user._id,
+      account: user.email,
+      type: 'fund_withdrawal',
+      amount: amount,
+      sender: fund.name,
+      recipient: user.name || user.email,
+      note: note,
+      status: 'completed',
+      metadata: { fundId: fund.id, fundName: fund.name }
+    });
+
+    res.json({
+      message: 'Rút tiền thành công',
+      fund: updatedFund,
+      walletBalance: credited.walletBalance,
+      transaction: txn
+    });
+  } catch (error) {
+    // Hoàn tác khi phát sinh lỗi trong quá trình rút tiền
+    await Fund.updateOne({ _id: fund._id }, { $inc: { currentAmount: amount } });
+    await User.updateOne({ _id: user._id }, { $inc: { walletBalance: -amount } });
+    return res.status(500).json({ error: 'Rút tiền không thành công', code: 'WITHDRAWAL_FAILED' });
+  }
 };
 
 exports.contribute = async function(req, res) {
@@ -301,6 +581,16 @@ exports.delete = async function(req, res) {
   if (!fund) {
     return res.status(404).json({ error: 'Quỹ không tồn tại hoặc bạn không có quyền xóa quỹ này' });
   }
+
+  // Quỹ chỉ được xoá khi số dư của quỹ còn 0đ
+  if (Number(fund.currentAmount || 0) > 0) {
+    return res.status(400).json({
+      error: 'Chỉ được xoá quỹ khi số dư quỹ bằng 0',
+      code: 'FUND_NOT_EMPTY',
+      currentAmount: fund.currentAmount
+    });
+  }
+
   await FundInvitation.deleteMany({ fundId: fund._id });
   await Fund.deleteOne({ _id: fund._id });
   res.json({ message: 'Xoá quỹ thành công', id: fund._id });

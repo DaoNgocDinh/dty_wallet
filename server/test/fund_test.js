@@ -29,6 +29,18 @@ async function runTests() {
   console.log('--- Bắt đầu kiểm thử Backend Use Case 05: Góp tiền vào quỹ & Chi tiết quỹ ---');
   await connectDatabase();
 
+  // Dọn dẹp dữ liệu cũ nếu có (để test có thể chạy lại nhiều lần)
+  await User.deleteMany({
+    email: {
+      $in: [
+        'test_contribute@gmail.com',
+        'test_member_leave@gmail.com',
+        'outsider_test@gmail.com'
+      ]
+    }
+  });
+  await Transaction.deleteMany({ account: 'test_contribute@gmail.com' });
+
   // Tạo người dùng test
   var user = await User.findOne({ email: 'test_contribute@gmail.com' });
   if (user) {
@@ -287,8 +299,32 @@ async function runTests() {
     console.log('[PASS] Test 14: Thành viên quỹ rời quỹ thành công, danh sách thành viên được cập nhật');
   }
 
-  // Test 15: Chủ quỹ xoá quỹ thành công
+  // Test 15: Chủ quỹ không được xoá quỹ khi số dư quỹ khác 0đ
   {
+    var req = {
+      params: { id: fund._id.toString() },
+      user: { id: user._id.toString() }
+    };
+    var res = mockResponse();
+    await fundController.delete(req, res);
+    assert.strictEqual(res.statusCode, 400);
+    assert.strictEqual(res.data.code, 'FUND_NOT_EMPTY');
+    assert.strictEqual(res.data.error, 'Chỉ được xoá quỹ khi số dư quỹ bằng 0');
+    console.log('[PASS] Test 15: Quỹ còn 1.500.000đ không được xoá');
+  }
+
+  // Test 16: Chủ quỹ rút hết tiền (quỹ về 0đ) rồi xoá quỹ thành công
+  {
+    var withdrawReq = {
+      params: { id: fund._id.toString() },
+      user: { id: user._id.toString() },
+      body: { amount: 1500000 }
+    };
+    var withdrawRes = mockResponse();
+    await fundController.withdraw(withdrawReq, withdrawRes);
+    assert.strictEqual(withdrawRes.statusCode, 200);
+    assert.strictEqual(withdrawRes.data.fund.currentAmount, 0);
+
     var req = {
       params: { id: fund._id.toString() },
       user: { id: user._id.toString() }
@@ -300,7 +336,7 @@ async function runTests() {
 
     var deletedFund = await Fund.findById(fund._id);
     assert.strictEqual(deletedFund, null);
-    console.log('[PASS] Test 15: Chủ quỹ xoá quỹ thành công');
+    console.log('[PASS] Test 16: Chủ quỹ rút hết tiền (quỹ về 0đ) rồi xoá quỹ thành công');
   }
 
   // Dọn dẹp dữ liệu test
@@ -308,7 +344,7 @@ async function runTests() {
   await User.deleteMany({ _id: { $in: [user._id, memberUser._id] } });
   await User.db.close();
 
-  console.log('--- TẤT CẢ CÁC BÀI TEST BACKEND ĐÃ VƯỢT QUA THÀNH CÔNG (15/15) ---');
+  console.log('--- TẤT CẢ CÁC BÀI TEST BACKEND ĐÃ VƯỢT QUA THÀNH CÔNG (16/16) ---');
 }
 
 runTests().catch(function(err) {

@@ -2,6 +2,7 @@ var Fund = require('../model/Fund');
 var FundInvitation = require('../model/FundInvitation');
 var Notification = require('../model/Notification');
 var User = require('../model/User');
+var fundRules = require('../utils/fundRules');
 
 function isFundMember(fund, userId) {
   if (!fund || !userId) return false;
@@ -38,6 +39,12 @@ exports.getCandidates = async function(req, res) {
       error: 'Quỹ cá nhân không thể mời thành viên',
       code: 'PERSONAL_FUND_CANNOT_INVITE'
     });
+  }
+
+  // Quỹ cặp đôi chỉ được có 2 người dùng nên không thể mời thêm
+  var coupleBlocked = await fundRules.checkCoupleFundCapacity(fund);
+  if (coupleBlocked) {
+    return res.status(coupleBlocked.status).json(coupleBlocked.body);
   }
 
   var query = req.query.query !== undefined && req.query.query !== null ? String(req.query.query).trim() : '';
@@ -146,6 +153,12 @@ exports.sendInvite = async function(req, res) {
       error: 'Quỹ cá nhân không thể mời thành viên',
       code: 'PERSONAL_FUND_CANNOT_INVITE'
     });
+  }
+
+  // Quỹ cặp đôi chỉ được có 2 người dùng: đã đủ 2 người hoặc đang chờ người được chọn đồng ý
+  var coupleBlocked = await fundRules.checkCoupleFundCapacity(fund);
+  if (coupleBlocked) {
+    return res.status(coupleBlocked.status).json(coupleBlocked.body);
   }
 
   var inviteeId = req.body.inviteeId;
@@ -296,6 +309,14 @@ exports.acceptInvite = async function(req, res) {
     return res.status(404).json({ error: 'Quỹ không còn tồn tại' });
   }
 
+  // Quỹ cặp đôi chỉ có tối đa 2 người dùng
+  if (fundRules.isCoupleFund(fund) && fundRules.countMembers(fund) >= fundRules.COUPLE_FUND_MAX_MEMBERS) {
+    return res.status(400).json({
+      error: 'Quỹ cặp đôi chỉ có 2 người dùng',
+      code: 'COUPLE_FUND_FULL'
+    });
+  }
+
   // Thêm thành viên vào quỹ
   if (!isFundMember(fund, req.user.id)) {
     fund.members.push({
@@ -303,6 +324,12 @@ exports.acceptInvite = async function(req, res) {
       role: 'member',
       joinedAt: new Date()
     });
+    await fund.save();
+  }
+
+  // Quỹ cặp đôi chỉ được lập chính thức khi đã có đủ 2 người dùng
+  if (fundRules.isCoupleFund(fund) && fund.status !== 'active') {
+    fund.status = 'active';
     await fund.save();
   }
 
@@ -324,7 +351,9 @@ exports.acceptInvite = async function(req, res) {
   });
 
   res.json({
-    message: 'Tham gia quỹ thành công',
+    message: fundRules.isCoupleFund(fund)
+      ? 'Tham gia quỹ cặp đôi thành công'
+      : 'Tham gia quỹ thành công',
     data: invitation,
     fund: fund
   });

@@ -1,0 +1,1 @@
+export 'fund_screens/select_partner_screen.dart';

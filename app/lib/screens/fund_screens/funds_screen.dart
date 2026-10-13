@@ -239,6 +239,9 @@ class _FundsScreenState extends State<FundsScreen> {
           final targetAmount = item['targetAmount'];
           final hasTarget = targetAmount != null && (targetAmount as num) > 0;
           final targetAmountStr = hasTarget ? '${targetAmount} đ' : '0 đ';
+          // Quỹ cặp đôi đã tạo nhưng chưa có người cùng lập quỹ đồng ý
+          final isPendingPartner =
+              item['status']?.toString() == 'pending_partner';
 
           return Material(
             color: Colors.white,
@@ -317,6 +320,30 @@ class _FundsScreenState extends State<FundsScreen> {
                                     ),
                                   ),
                                 ),
+                                if (isPendingPartner) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFF8E1),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: const Color(0xFFFFE082),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Chờ đồng ý',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        color: Color(0xFFF57F17),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(

@@ -152,11 +152,13 @@ class AppSession extends ChangeNotifier {
   }
 
   /// Tạo quỹ mới.
+  /// Quỹ "Cặp đôi" bắt buộc phải chọn [partnerId] là người dùng khác.
   Future<Map<String, dynamic>> createFund({
     required String name,
     required String fundType,
     double? targetAmount,
     DateTime? completionDate,
+    String? partnerId,
   }) {
     final token = _token;
     if (token == null) throw ApiException('Chưa đăng nhập');
@@ -166,7 +168,45 @@ class AppSession extends ChangeNotifier {
       fundType: fundType,
       targetAmount: targetAmount,
       completionDate: completionDate,
+      partnerId: partnerId,
     );
+  }
+
+  /// Rút tiền từ quỹ về ví cá nhân (chỉ chủ quỹ).
+  Future<Map<String, dynamic>> withdrawFund({
+    required String fundId,
+    required double amount,
+    String? note,
+  }) async {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    final res = await _authService.withdrawFund(
+      token: token,
+      fundId: fundId,
+      amount: amount,
+      note: note,
+    );
+    if (res['walletBalance'] != null && _user != null) {
+      final newBalance = (res['walletBalance'] as num).toDouble();
+      _user = AuthUser(
+        id: _user!.id,
+        name: _user!.name,
+        email: _user!.email,
+        walletBalance: newBalance,
+        role: _user!.role,
+        createdAt: _user!.createdAt,
+        hasPin: _user!.hasPin,
+      );
+      notifyListeners();
+    }
+    return res;
+  }
+
+  /// Danh sách người dùng để chọn làm người cùng lập quỹ cặp đôi.
+  Future<Map<String, dynamic>> fetchPartnerCandidates({String? query}) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.partnerCandidates(token: token, query: query);
   }
 
   /// Xoá quỹ theo ID.
@@ -211,6 +251,7 @@ class AppSession extends ChangeNotifier {
         name: _user!.name,
         email: _user!.email,
         walletBalance: newBalance,
+        role: _user!.role,
         createdAt: _user!.createdAt,
         hasPin: _user!.hasPin,
       );

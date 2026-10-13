@@ -38,8 +38,12 @@ The script is safe to re-run and reads `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSW
 - `GET /api/transactions` — search by `transactionCode`, `type`, `status`, `fromDate`, `toDate`, `sender`, `recipient`; supports `page` and `limit`.
 - `GET /api/transactions/history` — authenticated user's transaction history; each item includes account, user ID, time, type, status and amount.
 - `GET /api/funds` — returns the user's funds and computed current fund count.
-- `POST /api/funds` — `{ name, fundType, targetAmount, completionDate? }`.
+- `POST /api/funds` — `{ name, fundType, targetAmount, completionDate?, partnerId? }`. `fundType: "Cặp đôi"` **requires** `partnerId` (or `partnerPhoneNumber`/`partnerName`): the fund is created with status `pending_partner` plus a pending invitation, and only becomes an active two-member fund after the selected user accepts. Missing partner → `PARTNER_REQUIRED`, self-selection → `CANNOT_INVITE_SELF`, admin account → `CANNOT_INVITE_ADMIN`.
+- `GET /api/funds/partner-candidates?query=` — users that can be picked as the partner of a couple fund (never returns the current user or admin accounts). Empty search result returns `NO_USER_FOUND`.
 - `POST /api/funds/:id/contributions` — `{ amount, note? }`; debits available wallet balance and records contribution.
+- `POST /api/funds/:id/withdraw` — `{ amount, note? }`; **owner only** (`NOT_FUND_OWNER` otherwise). Minimum 1.000đ (`MIN_AMOUNT_1000`), the amount may not exceed the fund balance (`INSUFFICIENT_FUND_BALANCE`), and the money is credited back to the owner's wallet with a `fund_withdrawal` transaction.
+- `DELETE /api/funds/:id` — owner only; a fund can **only** be deleted while its balance is `0`, otherwise `FUND_NOT_EMPTY` (the response carries `currentAmount`).
+- `POST /api/funds/:id/invitations` and `GET /api/funds/:id/candidates` — couple funds are capped at 2 users: `COUPLE_FUND_FULL` once both users are in, `COUPLE_FUND_PENDING` while waiting for the selected partner to accept.
 - `GET /api/wallet` — available wallet balance.
 - `POST /api/wallet/deposits` — `{ source, amount, paymentMethod? , qrInfo? }`; creates a pending payment intent and does not credit the wallet before external payment confirmation.
 - `POST /api/wallet/topups/mobile` — `{ carrier, phoneNumber, amount, denomination?, pin }`.
@@ -51,6 +55,14 @@ The script is safe to re-run and reads `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSW
 
 Payment provider, bank/QR confirmation, SMS/OTP delivery, and biller integrations are not configured in the project. Top-up and bill-payment requests are stored as `pending` and do not debit the wallet; deposit intents do not increase wallet balance until a trusted provider callback is implemented. Never treat client-submitted QR data or OTP as provider confirmation.
 
-The invite-member feature is intentionally not implemented yet: its input-field requirements were marked as needing clarification, so this backend does not invent an invitation payload.
+## Tests
+
+| Script | Scope |
+| --- | --- |
+| `npm test` | runs every suite below in order |
+| `npm run test:withdraw` | fund withdrawal for the owner + "delete only at 0đ" rule (`test/fund_withdraw_test.js`) |
+| `npm run test:couple` | couple fund rules: mandatory partner, 2-user cap, delete at 0đ (`test/couple_fund_test.js`) |
+
+The suites connect to the same MongoDB database and clean up their own fixtures, so they can be re-run safely.
 
 Amounts are numeric values in the application's chosen currency unit. Do not expose internal database errors or the development JWT fallback in production; set a strong `JWT_SECRET`.

@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/back_label.dart';
 import '../../widgets/error_message.dart';
+import 'select_partner_screen.dart';
 
 /// Hằng số độ dài tối đa tên quỹ theo đặc tả Use Case 04
 const int kMaxFundNameLength = 60;
@@ -34,6 +35,9 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
   String? _selectedFundType;
   DateTime? _selectedCompletionDate;
 
+  // Quỹ cặp đôi: bắt buộc chọn người dùng khác ngay từ lúc lập quỹ
+  Map<String, dynamic>? _selectedPartner;
+
   int? _fundCount;
   bool _isLoadingCount = false;
   bool _isSubmitting = false;
@@ -43,6 +47,7 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
   String? _nameError; // E3: Vui lòng nhập tên quỹ
   String? _targetAmountError; // E5, E6
   String? _completionDateError; // E7: Vui lòng chọn ngày hoàn thành mục tiêu
+  String? _partnerError; // E9: Vui lòng chọn người dùng khác để lập quỹ cặp đôi
   String? _generalError; // E8: Vui lòng nhập đầy đủ thông tin
 
   @override
@@ -114,6 +119,33 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
     }
   }
 
+  String get _selectedPartnerId {
+    final partner = _selectedPartner;
+    if (partner == null) return '';
+    return partner['id']?.toString() ?? partner['_id']?.toString() ?? '';
+  }
+
+  String get _selectedPartnerName =>
+      _selectedPartner?['name']?.toString() ?? '';
+
+  String get _selectedPartnerPhone =>
+      _selectedPartner?['phoneNumber']?.toString() ?? '';
+
+  /// Mở màn hình chọn người dùng khác làm người cùng lập quỹ cặp đôi
+  Future<void> _pickPartner() async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SelectPartnerScreen()),
+    );
+
+    if (result is Map<String, dynamic> && mounted) {
+      setState(() {
+        _selectedPartner = result;
+        _partnerError = null;
+        if (_generalError != null) _generalError = null;
+      });
+    }
+  }
+
   Future<void> _handleSubmit() async {
     // 1. Kiểm tra Pre-condition: Người dùng đã làm chủ từ 10 quỹ trở lên (Exceptions 1.1)
     if (_fundCount != null && _fundCount! >= 10) {
@@ -127,6 +159,7 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
     String? nameError;
     String? targetAmountError;
     String? completionDateError;
+    String? partnerError;
     bool hasMissingRequiredInfo = false;
 
     // 2. Kiểm tra loại quỹ (Exceptions 3.1: E2)
@@ -165,6 +198,12 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
       }
     }
 
+    // 4b. Quỹ Cặp đôi: bắt buộc chọn người dùng khác ngay từ lúc lập quỹ (E9)
+    if (_selectedFundType == 'Cặp đôi' && _selectedPartner == null) {
+      partnerError = 'Vui lòng chọn người dùng khác để lập quỹ cặp đôi'; // E9
+      hasMissingRequiredInfo = true;
+    }
+
     // 5. Kiểm tra đầy đủ thông tin (Exceptions 5.6: E8)
     String? generalError;
     if (hasMissingRequiredInfo) {
@@ -176,6 +215,7 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
       _nameError = nameError;
       _targetAmountError = targetAmountError;
       _completionDateError = completionDateError;
+      _partnerError = partnerError;
       _generalError = generalError;
     });
 
@@ -193,12 +233,17 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
         fundType: _selectedFundType!,
         targetAmount: targetAmount,
         completionDate: _selectedCompletionDate,
+        partnerId: _selectedFundType == 'Cặp đôi' ? _selectedPartnerId : null,
       );
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Tạo quỹ thành công'),
-          backgroundColor: Color(0xFF2E7D32),
+        SnackBar(
+          content: Text(
+            _selectedFundType == 'Cặp đôi'
+                ? 'Đã gửi lời mời lập quỹ cặp đôi'
+                : 'Tạo quỹ thành công',
+          ),
+          backgroundColor: const Color(0xFF2E7D32),
         ),
       );
       if (navigator.canPop()) {
@@ -206,7 +251,22 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
       }
     } on ApiException catch (e) {
       if (!mounted) return;
-      if (e.message.contains('Không thể tạo thêm quỹ') || e.code == 'MAX_FUNDS_EXCEEDED') {
+      if (e.code == 'PARTNER_REQUIRED') {
+        setState(() {
+          _partnerError = 'Vui lòng chọn người dùng khác để lập quỹ cặp đôi';
+          _generalError = null;
+        });
+      } else if (e.code == 'CANNOT_INVITE_SELF') {
+        setState(() {
+          _partnerError = 'Bạn không thể chọn chính mình làm người cùng lập quỹ';
+          _generalError = null;
+        });
+      } else if (e.code == 'USER_NOT_FOUND' || e.code == 'CANNOT_INVITE_ADMIN') {
+        setState(() {
+          _partnerError = e.message;
+          _generalError = null;
+        });
+      } else if (e.message.contains('Không thể tạo thêm quỹ') || e.code == 'MAX_FUNDS_EXCEEDED') {
         setState(() => _fundCountError = 'Không thể tạo thêm quỹ');
       } else {
         setState(() => _generalError = e.message);
@@ -303,6 +363,10 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
                                 setState(() {
                                   _selectedFundType = val ? type : null;
                                   _fundTypeError = null;
+                                  if (type != 'Cặp đôi') {
+                                    _selectedPartner = null;
+                                    _partnerError = null;
+                                  }
                                   if (_generalError != null) _generalError = null;
                                 });
                               },
@@ -370,6 +434,153 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
                           fontSize: 12.5,
                         ),
                       ),
+                    ],
+
+                    // 3. QUỸ CẶP ĐÔI: bắt buộc chọn người dùng khác ngay từ lúc lập quỹ
+                    if (_selectedFundType == 'Cặp đôi') ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Người cùng lập quỹ *',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Quỹ cặp đôi chỉ có 2 người dùng. Người được chọn sẽ nhận lời mời và quỹ chính thức được lập khi họ đồng ý.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_selectedPartner != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightBlue.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.lightBlue.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: AppColors.lightBlue
+                                    .withValues(alpha: 0.15),
+                                child: Text(
+                                  _selectedPartnerName.isNotEmpty
+                                      ? _selectedPartnerName
+                                          .substring(0, 1)
+                                          .toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.lightBlueDark,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _selectedPartnerName,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (_selectedPartnerPhone.isNotEmpty)
+                                      Text(
+                                        _selectedPartnerPhone,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 18),
+                                tooltip: 'Bỏ chọn',
+                                onPressed: () => setState(() {
+                                  _selectedPartner = null;
+                                  _partnerError = null;
+                                }),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        InkWell(
+                          key: const ValueKey('pick_partner_button'),
+                          onTap: _fundCountError != null ? null : _pickPartner,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _partnerError != null
+                                    ? AppColors.error
+                                    : AppColors.border,
+                              ),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.person_search_rounded,
+                                  color: AppColors.lightBlue,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Chọn người dùng khác...',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 14,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      // Thông báo lỗi E9 ngay dưới ô chọn người cùng lập quỹ
+                      if (_partnerError != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _partnerError!,
+                          style: const TextStyle(
+                            color: AppColors.error,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ],
                     ],
 
                     // 3. Quỹ Tích lũy (Luồng con 3.3)
