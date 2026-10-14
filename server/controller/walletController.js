@@ -234,6 +234,47 @@ var MOCK_BILLS = [
   { customerCode: 'QR_WATER001', billType: 'Nước', customerName: 'Phùng Thị M', provider: 'Công ty Cấp nước Bình Dương', period: 'Tháng 9/2026', amount: 95000, fee: 5000 },
 ];
 
+function resolveBill(customerCode, billType) {
+  var bill = MOCK_BILLS.find(function(b) {
+    var codeMatch = b.customerCode.toLowerCase() === customerCode.toLowerCase();
+    var typeMatch = !billType || b.billType.toLowerCase() === billType.toLowerCase();
+    return codeMatch && typeMatch;
+  });
+
+  if (bill) return bill;
+
+  // Nếu người dùng nhập mã kiểm thử "NOTEXIST*", trả về null để báo lỗi không tìm thấy (E3/E6)
+  if (customerCode.toUpperCase().startsWith('NOTEXIST')) {
+    return null;
+  }
+
+  // Tự động sinh thông tin hóa đơn cho bất kỳ mã khách hàng nào người dùng nhập (VD: 33322)
+  var providerMap = {
+    'Điện': 'Điện lực EVN',
+    'Nước': 'Công ty Cấp nước sinh hoạt',
+    'Internet': 'Viettel Telecom',
+    'Bảo hiểm': 'Bảo hiểm Bảo Việt'
+  };
+  var feeMap = {
+    'Điện': 0,
+    'Nước': 5000,
+    'Internet': 0,
+    'Bảo hiểm': 10000
+  };
+  var currentMonth = new Date().getMonth() + 1;
+  var currentYear = new Date().getFullYear();
+
+  return {
+    customerCode: customerCode,
+    billType: billType || 'Điện',
+    customerName: 'Khách hàng ' + customerCode,
+    provider: providerMap[billType] || 'Đơn vị cung cấp dịch vụ',
+    period: 'Tháng ' + currentMonth + '/' + currentYear,
+    amount: 250000,
+    fee: feeMap[billType] || 0
+  };
+}
+
 /**
  * 2.1.7. Chức năng Thanh toán hóa đơn (Use Case 07 - Cao Thái Tuấn)
  * Bước 8: Gọi API đối tác để lấy thông tin hóa đơn
@@ -266,11 +307,7 @@ exports.getBillInfo = async function(req, res) {
     return res.status(504).json({ code: 'PARTNER_TIMEOUT', error: 'Không thể kết nối đến hệ thống đối tác. Vui lòng thử lại sau.' });
   }
 
-  var bill = MOCK_BILLS.find(function(b) {
-    var codeMatch = b.customerCode.toLowerCase() === customerCode.toLowerCase();
-    var typeMatch = !billType || b.billType.toLowerCase() === billType.toLowerCase();
-    return codeMatch && typeMatch;
-  });
+  var bill = resolveBill(customerCode, billType);
 
   if (!bill) {
     return res.status(404).json({ code: 'BILL_NOT_FOUND', error: 'Không tìm thấy thông tin hóa đơn. Vui lòng kiểm tra lại mã khách hàng.' });
@@ -311,11 +348,7 @@ exports.payBill = async function(req, res) {
     return res.status(504).json({ code: 'PARTNER_TIMEOUT', error: 'Không thể kết nối đến hệ thống đối tác. Vui lòng thử lại sau.' });
   }
 
-  var bill = MOCK_BILLS.find(function(b) {
-    var codeMatch = b.customerCode.toLowerCase() === customerCode.toLowerCase();
-    var typeMatch = !billType || b.billType.toLowerCase() === billType.toLowerCase();
-    return codeMatch && typeMatch;
-  });
+  var bill = resolveBill(customerCode, billType);
 
   if (!bill) {
     return res.status(404).json({ code: 'BILL_NOT_FOUND', error: 'Không tìm thấy thông tin hóa đơn. Vui lòng kiểm tra lại mã khách hàng.' });
