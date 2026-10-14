@@ -49,9 +49,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         confirmNewPassword: _confirmPasswordController.text,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đổi mật khẩu thành công')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Đổi mật khẩu thành công.')));
       Navigator.of(context).pop();
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -105,7 +105,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                     const SizedBox(height: 30),
                     AuthTextField(
-                      label: 'Mật khẩu cũ',
+                      label: 'Mật khẩu hiện tại',
                       hintText: 'Nhập mật khẩu hiện tại',
                       icon: Icons.lock_outline_rounded,
                       controller: _currentPasswordController,
@@ -113,7 +113,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       textInputAction: TextInputAction.next,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Vui lòng nhập mật khẩu cũ';
+                          return 'Mật khẩu hiện tại không được bỏ trống.';
                         }
                         return null;
                       },
@@ -121,39 +121,42 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     const SizedBox(height: 22),
                     AuthTextField(
                       label: 'Mật khẩu mới',
-                      hintText: 'Tối thiểu $kMinPasswordLength ký tự',
+                      hintText: 'Từ 8 đến 20 ký tự, gồm chữ và số',
                       icon: Icons.lock_reset_rounded,
                       controller: _newPasswordController,
                       obscureText: true,
                       textInputAction: TextInputAction.next,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Vui lòng nhập mật khẩu mới';
+                          return 'Mật khẩu mới không được bỏ trống.';
                         }
-                        if (value.length < kMinPasswordLength) {
-                          return 'Mật khẩu mới tối thiểu $kMinPasswordLength ký tự';
+                        if (value.length < 8 || value.length > 20) {
+                          return 'Mật khẩu mới phải có từ 8 đến 20 ký tự.';
                         }
-                        if (value == _currentPasswordController.text) {
-                          return 'Mật khẩu mới phải khác mật khẩu cũ';
+                        if (!RegExp(r'\p{L}', unicode: true).hasMatch(value) ||
+                            !RegExp(r'\p{Nd}', unicode: true).hasMatch(value)) {
+                          return 'Mật khẩu mới phải bao gồm cả chữ và số.';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 22),
                     AuthTextField(
-                      label: 'Xác thực mật khẩu',
+                      label: 'Xác nhận mật khẩu mới',
                       hintText: 'Nhập lại mật khẩu mới',
                       icon: Icons.verified_user_outlined,
                       controller: _confirmPasswordController,
                       obscureText: true,
                       textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) { _handleChangePassword(); },
+                      onFieldSubmitted: (_) {
+                        _handleChangePassword();
+                      },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Vui lòng xác thực mật khẩu mới';
+                          return 'Vui lòng xác nhận mật khẩu mới.';
                         }
                         if (value != _newPasswordController.text) {
-                          return 'Xác thực mật khẩu không khớp';
+                          return 'Mật khẩu xác nhận không trùng khớp với mật khẩu mới.';
                         }
                         return null;
                       },
@@ -164,7 +167,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ],
                     const SizedBox(height: 32),
                     AppButton(
-                      text: 'Xác nhận đổi mật khẩu',
+                      text: 'Đổi mật khẩu',
                       isLoading: _isLoading,
                       onPressed: _handleChangePassword,
                     ),
@@ -181,7 +184,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
 /// Mở màn hình đổi mật khẩu từ trang chủ.
 void openChangePasswordScreen(BuildContext context) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const ChangePasswordScreen()),
-  );
+  Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => const ChangePasswordScreen()));
 }

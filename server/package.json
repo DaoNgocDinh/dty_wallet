@@ -6,6 +6,7 @@
     "start": "node ./bin/www",
     "seed": "node ./db/seed.js",
     "test": "node ./test/fund_test.js && node ./test/invite_member_test.js && node ./test/admin_test.js && node ./test/fund_withdraw_test.js && node ./test/couple_fund_test.js",
+    "test:password": "node ./test/change_password_test.js",
     "test:admin": "node ./test/admin_test.js",
     "test:invite": "node ./test/invite_member_test.js",
     "test:withdraw": "node ./test/fund_withdraw_test.js",
