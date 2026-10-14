@@ -32,7 +32,7 @@ class FakeAuthService implements AuthService {
   FakeAuthService({required this.acceptedPassword});
 
   final String acceptedPassword;
-  String? currentPassword = 'mat-khau-cu';
+  String? currentPassword = 'Matkhau123';
 
   @override
   FundService get fundService => FundService();
@@ -91,13 +91,35 @@ class FakeAuthService implements AuthService {
   }) async {
     if (currentPassword != this.currentPassword) {
       throw ApiException(
-        'Mật khẩu cũ không đúng',
-        code: 'WRONG_PASSWORD',
+        'Mật khẩu hiện tại không chính xác.',
+        code: 'INCORRECT_CURRENT_PASSWORD',
         statusCode: 400,
       );
     }
+    if (newPassword.length < 8 || newPassword.length > 20) {
+      throw ApiException(
+        'Mật khẩu mới phải có từ 8 đến 20 ký tự.',
+        code: 'INVALID_NEW_PASSWORD_LENGTH',
+      );
+    }
+    if (!RegExp(r'\p{L}', unicode: true).hasMatch(newPassword) ||
+        !RegExp(r'\p{Nd}', unicode: true).hasMatch(newPassword)) {
+      throw ApiException(
+        'Mật khẩu mới phải bao gồm cả chữ và số.',
+        code: 'NEW_PASSWORD_REQUIRES_LETTER_AND_NUMBER',
+      );
+    }
+    if (newPassword == this.currentPassword) {
+      throw ApiException(
+        'Mật khẩu mới phải khác mật khẩu hiện tại.',
+        code: 'NEW_PASSWORD_SAME_AS_CURRENT',
+      );
+    }
     if (newPassword != confirmNewPassword) {
-      throw ApiException('Xác thực mật khẩu không khớp', code: 'INVALID_INPUT');
+      throw ApiException(
+        'Mật khẩu xác nhận không trùng khớp với mật khẩu mới.',
+        code: 'PASSWORD_CONFIRMATION_MISMATCH',
+      );
     }
     this.currentPassword = newPassword;
   }
@@ -1162,9 +1184,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ChangePasswordScreen), findsOneWidget);
-    expect(find.text('Mật khẩu cũ'), findsOneWidget);
+    expect(find.text('Mật khẩu hiện tại'), findsOneWidget);
     expect(find.text('Mật khẩu mới'), findsOneWidget);
-    expect(find.text('Xác thực mật khẩu'), findsOneWidget);
+    expect(find.text('Xác nhận mật khẩu mới'), findsOneWidget);
 
     // Nhãn trở lại đưa về Trang cá nhân
     await tester.tap(find.text('Trở về'));
@@ -1189,13 +1211,13 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).at(0), 'khong-dung');
-    await tester.enterText(find.byType(TextFormField).at(1), 'matkhau moi');
-    await tester.enterText(find.byType(TextFormField).at(2), 'matkhau moi');
-    await tapButton(tester, 'Xác nhận đổi mật khẩu');
+    await tester.enterText(find.byType(TextFormField).at(1), 'Matkhau123');
+    await tester.enterText(find.byType(TextFormField).at(2), 'Matkhau123');
+    await tapButton(tester, 'Đổi mật khẩu');
     await tester.pumpAndSettle();
 
     expect(find.byType(ChangePasswordScreen), findsOneWidget);
-    expect(find.text('Mật khẩu cũ không đúng'), findsOneWidget);
+    expect(find.text('Mật khẩu hiện tại không chính xác.'), findsOneWidget);
   });
 
   testWidgets('Đổi mật khẩu: mật khẩu mới khác xác thực sẽ bị chặn', (
@@ -1212,13 +1234,91 @@ void main() {
     await tester.tap(changePwdMenu);
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'mat-khau-cu');
-    await tester.enterText(find.byType(TextFormField).at(1), 'matkhaumoi');
-    await tester.enterText(find.byType(TextFormField).at(2), 'matkhaumoi2');
-    await tapButton(tester, 'Xác nhận đổi mật khẩu');
+    await tester.enterText(find.byType(TextFormField).at(0), 'Matkhau123');
+    await tester.enterText(find.byType(TextFormField).at(1), 'Matkhau123');
+    await tester.enterText(find.byType(TextFormField).at(2), 'Matkhau456');
+    await tapButton(tester, 'Đổi mật khẩu');
     await tester.pumpAndSettle();
 
-    expect(find.text('Xác thực mật khẩu không khớp'), findsOneWidget);
+    expect(
+      find.text('Mật khẩu xác nhận không trùng khớp với mật khẩu mới.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Đổi mật khẩu: kiểm tra độ dài và yêu cầu chữ số', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await _login(tester, account: 'admin', password: '123456');
+
+    await tester.tap(find.byTooltip('Trang cá nhân'));
+    await tester.pumpAndSettle();
+    final changePwdMenu = find.text('Đổi mật khẩu');
+    await tester.ensureVisible(changePwdMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(changePwdMenu);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Matkhau123');
+    await tester.enterText(find.byType(TextFormField).at(2), 'abc123');
+    await tester.enterText(find.byType(TextFormField).at(1), 'abc123');
+    await tapButton(tester, 'Đổi mật khẩu');
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Mật khẩu mới phải có từ 8 đến 20 ký tự.'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(
+      find.byType(TextFormField).at(1),
+      'abcdefghijklmnopqrst1',
+    );
+    await tester.enterText(
+      find.byType(TextFormField).at(2),
+      'abcdefghijklmnopqrst1',
+    );
+    await tapButton(tester, 'Đổi mật khẩu');
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Mật khẩu mới phải có từ 8 đến 20 ký tự.'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(find.byType(TextFormField).at(1), 'abcdefgh');
+    await tester.enterText(find.byType(TextFormField).at(2), 'abcdefgh');
+    await tapButton(tester, 'Đổi mật khẩu');
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Mật khẩu mới phải bao gồm cả chữ và số.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Đổi mật khẩu: mật khẩu mới phải khác mật khẩu hiện tại', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await _login(tester, account: 'admin', password: '123456');
+
+    await tester.tap(find.byTooltip('Trang cá nhân'));
+    await tester.pumpAndSettle();
+    final changePwdMenu = find.text('Đổi mật khẩu');
+    await tester.ensureVisible(changePwdMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(changePwdMenu);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Matkhau123');
+    await tester.enterText(find.byType(TextFormField).at(1), 'Matkhau123');
+    await tester.enterText(find.byType(TextFormField).at(2), 'Matkhau123');
+    await tapButton(tester, 'Đổi mật khẩu');
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Mật khẩu mới phải khác mật khẩu hiện tại.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Đổi mật khẩu thành công sẽ quay về trang cá nhân', (
@@ -1235,15 +1335,15 @@ void main() {
     await tester.tap(changePwdMenu);
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'mat-khau-cu');
-    await tester.enterText(find.byType(TextFormField).at(1), 'matkhau moi');
-    await tester.enterText(find.byType(TextFormField).at(2), 'matkhau moi');
-    await tapButton(tester, 'Xác nhận đổi mật khẩu');
+    await tester.enterText(find.byType(TextFormField).at(0), 'Matkhau123');
+    await tester.enterText(find.byType(TextFormField).at(1), 'Matkhau456');
+    await tester.enterText(find.byType(TextFormField).at(2), 'Matkhau456');
+    await tapButton(tester, 'Đổi mật khẩu');
     await tester.pumpAndSettle();
 
     expect(find.byType(ChangePasswordScreen), findsNothing);
     expect(find.byType(ProfileScreen), findsOneWidget);
-    expect(find.textContaining('Đổi mật khẩu thành công'), findsOneWidget);
+    expect(find.textContaining('Đổi mật khẩu thành công.'), findsOneWidget);
   });
 
   testWidgets(
