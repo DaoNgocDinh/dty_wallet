@@ -5,6 +5,7 @@ import '../../state/app_session.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/back_label.dart';
+import '../home_screen.dart' show formatVnd;
 import 'create_fund_screen.dart';
 import 'fund_detail_screen.dart';
 
@@ -236,9 +237,14 @@ class _FundsScreenState extends State<FundsScreen> {
           final item = _funds[index];
           final name = item['name']?.toString() ?? 'Quỹ';
           final fundType = item['fundType']?.toString() ?? 'Tiết kiệm';
-          final targetAmount = item['targetAmount'];
-          final hasTarget = targetAmount != null && (targetAmount as num) > 0;
-          final targetAmountStr = hasTarget ? '${targetAmount} đ' : '0 đ';
+          final currentAmount =
+              (item['currentAmount'] as num?)?.toDouble() ?? 0.0;
+          final targetAmount =
+              (item['targetAmount'] as num?)?.toDouble() ?? 0.0;
+          final hasTarget = targetAmount > 0;
+          final amountDisplay = hasTarget
+              ? '${formatVnd(currentAmount)} / ${formatVnd(targetAmount)}'
+              : formatVnd(currentAmount);
           // Quỹ cặp đôi đã tạo nhưng chưa có người cùng lập quỹ đồng ý
           final isPendingPartner =
               item['status']?.toString() == 'pending_partner';
@@ -347,7 +353,7 @@ class _FundsScreenState extends State<FundsScreen> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    targetAmountStr,
+                                    amountDisplay,
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,

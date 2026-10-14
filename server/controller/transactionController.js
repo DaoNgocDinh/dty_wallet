@@ -7,6 +7,16 @@ exports.search = async function(req, res) {
   });
   if (req.query.sender) filter.sender = new RegExp(escapeRegex(req.query.sender), 'i');
   if (req.query.recipient) filter.recipient = new RegExp(escapeRegex(req.query.recipient), 'i');
+  if (req.query.q) {
+    var qReg = new RegExp(escapeRegex(req.query.q), 'i');
+    filter.$or = [
+      { transactionCode: qReg },
+      { sender: qReg },
+      { recipient: qReg },
+      { note: qReg },
+      { type: qReg }
+    ];
+  }
 
   var createdAt = {};
   if (req.query.fromDate) createdAt.$gte = validDate(req.query.fromDate, false);
