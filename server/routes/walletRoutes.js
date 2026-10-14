@@ -6,6 +6,7 @@ var wallet = require('../controller/walletController');
 
 router.get('/', requireAuth, asyncHandler(wallet.balance));
 router.post('/deposits', requireAuth, asyncHandler(wallet.depositIntent));
+router.post('/deposits/demo', requireAuth, asyncHandler(wallet.demoDeposit));
 router.post('/topups/mobile', requireAuth, asyncHandler(wallet.mobileTopup('mobile_topup')));
 router.post('/topups/data', requireAuth, asyncHandler(wallet.mobileTopup('data_topup')));
 router.post('/bill-payments', requireAuth, asyncHandler(wallet.payBill));

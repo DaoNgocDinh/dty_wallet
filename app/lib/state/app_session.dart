@@ -52,7 +52,9 @@ class AppSession extends ChangeNotifier {
     final balance = res['walletBalance'] ?? res['balance'];
     final serverRole = res['role'] as String?;
     if (_user != null) {
-      final newBalance = balance != null ? (balance as num).toDouble() : _user!.walletBalance;
+      final newBalance = balance != null
+          ? (balance as num).toDouble()
+          : _user!.walletBalance;
       final newRole = serverRole ?? _user!.role;
       if (_user!.walletBalance != newBalance || _user!.role != newRole) {
         _user = AuthUser(
@@ -104,10 +106,7 @@ class AppSession extends ChangeNotifier {
   }
 
   /// Cập nhật mã PIN giao dịch.
-  Future<void> setPin({
-    required String password,
-    required String pin,
-  }) async {
+  Future<void> setPin({required String password, required String pin}) async {
     final token = _token;
     if (token == null) throw ApiException('Chưa đăng nhập');
     await _authService.setPin(token: token, password: password, pin: pin);
@@ -267,6 +266,52 @@ class AppSession extends ChangeNotifier {
     return _authService.spendingJars(token);
   }
 
+  /// Lấy chi tiết giao dịch của một hũ theo tháng và trang.
+  Future<Map<String, dynamic>> fetchSpendingJarDetails({
+    required String jarId,
+    required int year,
+    required int month,
+    int page = 1,
+  }) {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    return _authService.spendingJarDetails(
+      token: token,
+      jarId: jarId,
+      year: year,
+      month: month,
+      page: page,
+    );
+  }
+
+  /// Tạo hũ chi tiêu và đồng bộ số dư ví sau khi server xác nhận thành công.
+  Future<Map<String, dynamic>> createSpendingJar({
+    required String name,
+    required double amount,
+  }) async {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    final res = await _authService.createSpendingJar(
+      token: token,
+      name: name,
+      amount: amount,
+    );
+    final walletBalance = res['walletBalance'];
+    if (walletBalance != null && _user != null) {
+      _user = AuthUser(
+        id: _user!.id,
+        name: _user!.name,
+        email: _user!.email,
+        walletBalance: (walletBalance as num).toDouble(),
+        role: _user!.role,
+        createdAt: _user!.createdAt,
+        hasPin: _user!.hasPin,
+      );
+      notifyListeners();
+    }
+    return res;
+  }
+
   /// Nạp tiền vào ví.
   Future<Map<String, dynamic>> deposit({
     required double amount,
@@ -281,6 +326,34 @@ class AppSession extends ChangeNotifier {
       source: source,
       paymentMethod: paymentMethod,
     );
+  }
+
+  /// Nạp tiền demo và đồng bộ số dư sau khi server xác nhận.
+  Future<Map<String, dynamic>> demoDeposit({
+    required double amount,
+    required String source,
+  }) async {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    final res = await _authService.demoDeposit(
+      token: token,
+      amount: amount,
+      source: source,
+    );
+    final walletBalance = res['walletBalance'];
+    if (walletBalance != null && _user != null) {
+      _user = AuthUser(
+        id: _user!.id,
+        name: _user!.name,
+        email: _user!.email,
+        walletBalance: (walletBalance as num).toDouble(),
+        role: _user!.role,
+        createdAt: _user!.createdAt,
+        hasPin: _user!.hasPin,
+      );
+      notifyListeners();
+    }
+    return res;
   }
 
   /// Nạp điện thoại / Data.

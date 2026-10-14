@@ -7,7 +7,7 @@ Error responses carry a machine-readable `code` (`INVALID_CREDENTIALS`, `INVALID
 ## Run
 
 1. Install Node.js and MongoDB, then start MongoDB locally (or provide an Atlas connection string).
-2. Copy `.env.example` to `.env` and set a private `JWT_SECRET` and `MONGODB_URI`. The default database is **`dty_wallet`** (`mongodb://127.0.0.1:27017/dty_wallet`).
+2. Copy `.env.example` to `.env` and set a private `JWT_SECRET` and `MONGODB_URI`. The default database is **`app_nhom11`** (`mongodb://127.0.0.1:27017/app_nhom11`).
 3. Run `npm install`, then `npm run seed` to create the admin account, then `npm start` from this folder. The server listens on port 3000 by default.
 
 The server exits if MongoDB cannot be reached. `GET /api/health` reports server and database status. Pug is used for the retained starter pages.
@@ -46,14 +46,15 @@ The script is safe to re-run and reads `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSW
 - `POST /api/funds/:id/invitations` and `GET /api/funds/:id/candidates` — couple funds are capped at 2 users: `COUPLE_FUND_FULL` once both users are in, `COUPLE_FUND_PENDING` while waiting for the selected partner to accept.
 - `GET /api/wallet` — available wallet balance.
 - `POST /api/wallet/deposits` — `{ source, amount, paymentMethod? , qrInfo? }`; creates a pending payment intent and does not credit the wallet before external payment confirmation.
+- `POST /api/wallet/deposits/demo` — `{ source, amount }`; immediately credits the wallet and records a completed demo transaction. Disabled unless `DEMO_DEPOSITS_ENABLED=true`; never enable in production.
 - `POST /api/wallet/topups/mobile` — `{ carrier, phoneNumber, amount, denomination?, pin }`.
 - `POST /api/wallet/topups/data` — same as mobile top-up plus `dataPackage`.
 - `POST /api/wallet/bill-payments` — `{ paymentMethod, billType, customerCode, amount, content?, qrCode?, pin }`.
 - `GET /api/spending-jars` — list/count of the user's jars.
-- `POST /api/spending-jars` — `{ name, amount, pin }`; moves the initial amount from wallet balance into the jar.
-- `GET /api/spending-jars/:id?year=2026&month=10` — jar details and transactions, optionally filtered by month.
+- `POST /api/spending-jars` — `{ name, amount }`; moves the initial amount from wallet balance into the jar.
+- `GET /api/spending-jars/:id?year=2026&month=10&page=1&limit=10` — jar details and its transactions filtered by month, with up to 10 records per page and each transaction's post-transaction balance.
 
-Payment provider, bank/QR confirmation, SMS/OTP delivery, and biller integrations are not configured in the project. Top-up and bill-payment requests are stored as `pending` and do not debit the wallet; deposit intents do not increase wallet balance until a trusted provider callback is implemented. Never treat client-submitted QR data or OTP as provider confirmation.
+Payment provider, bank/QR confirmation, SMS/OTP delivery, and biller integrations are not configured in the project. Top-up and bill-payment requests are stored as `pending` and do not debit the wallet; normal deposit intents do not increase wallet balance until a trusted provider callback is implemented. The demo deposit endpoint is for local testing only and can mint balance; never enable it in production or treat client-submitted QR data or OTP as provider confirmation.
 
 ## Tests
 
@@ -63,6 +64,8 @@ Payment provider, bank/QR confirmation, SMS/OTP delivery, and biller integration
 | `npm run test:withdraw` | fund withdrawal for the owner + "delete only at 0đ" rule (`test/fund_withdraw_test.js`) |
 | `npm run test:couple` | couple fund rules: mandatory partner, 2-user cap, delete at 0đ (`test/couple_fund_test.js`) |
 
-The suites connect to the same MongoDB database and clean up their own fixtures, so they can be re-run safely.
+The test runner derives a separate database name by appending `_test` to `MONGODB_URI`, so tests cannot delete application users or data in the configured database.
+
+For local demo deposits, set `DEMO_DEPOSITS_ENABLED=true` in `server/.env` and restart the server. Demo deposits immediately add balance without moving real money; keep the setting disabled in production.
 
 Amounts are numeric values in the application's chosen currency unit. Do not expose internal database errors or the development JWT fallback in production; set a strong `JWT_SECRET`.

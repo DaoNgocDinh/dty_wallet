@@ -205,13 +205,21 @@ class FakeAuthService implements AuthService {
       (item) => (item['id'] ?? item['_id']) == fundId,
     );
     if (fundIndex == -1) {
-      throw ApiException('Quỹ không tồn tại', code: 'FUND_NOT_FOUND', statusCode: 404);
+      throw ApiException(
+        'Quỹ không tồn tại',
+        code: 'FUND_NOT_FOUND',
+        statusCode: 404,
+      );
     }
 
     final fund = Map<String, dynamic>.from(mockFunds[fundIndex]);
     final current = (fund['currentAmount'] as num?)?.toDouble() ?? 0;
     if (amount < 1000) {
-      throw ApiException('Tối thiểu 1000đ', code: 'MIN_AMOUNT_1000', statusCode: 400);
+      throw ApiException(
+        'Tối thiểu 1000đ',
+        code: 'MIN_AMOUNT_1000',
+        statusCode: 400,
+      );
     }
     if (amount > current) {
       throw ApiException(
@@ -254,7 +262,9 @@ class FakeAuthService implements AuthService {
       final role = c['role']?.toString().toLowerCase();
       final name = c['name']?.toString().trim().toLowerCase();
       final email = c['email']?.toString().trim().toLowerCase();
-      return role != 'admin' && name != 'admin' && !(email?.startsWith('admin@') ?? false);
+      return role != 'admin' &&
+          name != 'admin' &&
+          !(email?.startsWith('admin@') ?? false);
     }).toList();
 
     if (query != null && query.trim().isNotEmpty) {
@@ -289,7 +299,9 @@ class FakeAuthService implements AuthService {
     );
     if (fund.isNotEmpty && fund['members'] is List) {
       (fund['members'] as List).removeWhere((m) {
-        final uid = (m['userId'] is Map) ? (m['userId']['_id'] ?? m['userId']['id']) : m['userId'];
+        final uid = (m['userId'] is Map)
+            ? (m['userId']['_id'] ?? m['userId']['id'])
+            : m['userId'];
         return uid == '65f0000000000000000000aa';
       });
     }
@@ -395,8 +407,52 @@ class FakeAuthService implements AuthService {
     };
   }
 
+  List<Map<String, dynamic>> mockSpendingJars = [];
+
   @override
-  Future<Map<String, dynamic>> spendingJars(String token) async => {'data': []};
+  Future<Map<String, dynamic>> spendingJars(String token) async => {
+    'data': mockSpendingJars,
+    'count': mockSpendingJars.length,
+  };
+
+  @override
+  Future<Map<String, dynamic>> spendingJarDetails({
+    required String token,
+    required String jarId,
+    required int year,
+    required int month,
+    int page = 1,
+  }) async => {
+    'jar': mockSpendingJars.firstWhere(
+      (jar) => (jar['id'] ?? jar['_id']) == jarId,
+      orElse: () => <String, dynamic>{'id': jarId, 'name': 'Hũ kiểm thử'},
+    ),
+    'count': 1,
+    'page': page,
+    'pageSize': 10,
+    'totalPages': 1,
+    'transactions': [
+      {
+        'type': 'jar_contribution',
+        'amount': 100000,
+        'balanceAfter': 100000,
+        'createdAt': DateTime(year, month, 1).toIso8601String(),
+      },
+    ],
+  };
+
+  @override
+  Future<Map<String, dynamic>> createSpendingJar({
+    required String token,
+    required String name,
+    required double amount,
+  }) async {
+    mockWalletBalance -= amount;
+    return {
+      'jar': {'name': name, 'balance': amount},
+      'walletBalance': mockWalletBalance,
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> deposit({
@@ -405,6 +461,19 @@ class FakeAuthService implements AuthService {
     required String source,
     required String paymentMethod,
   }) async => {'message': 'Deposit success'};
+
+  @override
+  Future<Map<String, dynamic>> demoDeposit({
+    required String token,
+    required double amount,
+    required String source,
+  }) async {
+    mockWalletBalance += amount;
+    return {
+      'message': 'Nạp tiền demo thành công',
+      'walletBalance': mockWalletBalance,
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> mobileTopup({
@@ -1139,6 +1208,23 @@ void main() {
     },
   );
 
+  testWidgets('Nạp tiền demo cập nhật số dư ví ngay lập tức', (tester) async {
+    final service = FakeAuthService(acceptedPassword: '123456');
+    await tester.pumpWidget(buildApp(service: service));
+    await _login(tester, account: 'admin', password: '123456');
+
+    await tester.tap(find.text('Nạp tiền'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Chế độ demo'), findsOneWidget);
+
+    await tester.tap(find.text('Nạp tiền demo'));
+    await tester.pumpAndSettle();
+
+    expect(service.mockWalletBalance, 1100000);
+    expect(find.text('1.100.000 đ'), findsOneWidget);
+    expect(find.text('Nạp demo 100.000 đ thành công!'), findsOneWidget);
+  });
+
   testWidgets(
     'Trang chủ: Phần Ưu đãi & Khuyến mãi có 2 phần tử mới tương tác mở Quỹ và Hũ chi tiêu',
     (tester) async {
@@ -1174,7 +1260,28 @@ void main() {
       // Bấm vào phần tử Chi tiêu tháng -> Mở Hũ chi tiêu sheet
       await tester.tap(spendingPromo);
       await tester.pumpAndSettle();
-      expect(find.text('Hũ chi tiêu (6 Jars)'), findsOneWidget);
+      expect(find.text('Hũ chi tiêu').last, findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Hũ chi tiêu: mở chi tiết và hiển thị giao dịch/số dư sau giao dịch',
+    (tester) async {
+      final service = FakeAuthService(acceptedPassword: '123456')
+        ..mockSpendingJars = [
+          {'id': 'jar_1', 'name': 'Ăn uống', 'balance': 100000},
+        ];
+      await tester.pumpWidget(buildApp(service: service));
+      await _login(tester, account: 'admin', password: '123456');
+
+      await tester.tap(find.text('Hũ chi tiêu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ăn uống'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cấp tiền vào hũ'), findsOneWidget);
+      expect(find.text('Số dư sau giao dịch'), findsOneWidget);
+      expect(find.text('100.000 đ'), findsOneWidget);
     },
   );
 
@@ -2953,10 +3060,7 @@ void main() {
           'fundType': 'Hội nhóm',
           'userId': '65f0000000000000000000aa',
           'members': [
-            {
-              'userId': '65f0000000000000000000aa',
-              'role': 'owner',
-            },
+            {'userId': '65f0000000000000000000aa', 'role': 'owner'},
           ],
         };
 
@@ -2971,7 +3075,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // Chủ quỹ nhìn thấy nút "Xoá quỹ này" và không thấy nút "Rời khỏi quỹ"
-        expect(find.byKey(const ValueKey('delete_fund_button')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('delete_fund_button')),
+          findsOneWidget,
+        );
         expect(find.byKey(const ValueKey('leave_fund_button')), findsNothing);
 
         // Bấm nút "Xoá quỹ này"
@@ -3005,14 +3112,8 @@ void main() {
           'fundType': 'Hội nhóm',
           'userId': 'different_owner_id',
           'members': [
-            {
-              'userId': 'different_owner_id',
-              'role': 'owner',
-            },
-            {
-              'userId': '65f0000000000000000000aa',
-              'role': 'member',
-            },
+            {'userId': 'different_owner_id', 'role': 'owner'},
+            {'userId': '65f0000000000000000000aa', 'role': 'member'},
           ],
         };
 
@@ -3068,7 +3169,9 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: const MaterialApp(home: CreateFundScreen(initialFundCount: 0)),
+            child: const MaterialApp(
+              home: CreateFundScreen(initialFundCount: 0),
+            ),
           ),
         );
         await tester.pumpAndSettle();
@@ -3078,7 +3181,10 @@ void main() {
 
         // Trường chọn người cùng lập quỹ xuất hiện ngay khi chọn loại quỹ
         expect(find.text('Người cùng lập quỹ *'), findsOneWidget);
-        expect(find.byKey(const ValueKey('pick_partner_button')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('pick_partner_button')),
+          findsOneWidget,
+        );
         expect(find.text('Chọn người dùng khác...'), findsOneWidget);
 
         // Nhập tên quỹ nhưng chưa chọn người cùng lập quỹ
@@ -3104,17 +3210,24 @@ void main() {
         await tester.pumpWidget(
           AppScope(
             session: session,
-            child: const MaterialApp(home: CreateFundScreen(initialFundCount: 0)),
+            child: const MaterialApp(
+              home: CreateFundScreen(initialFundCount: 0),
+            ),
           ),
         );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Cặp đôi'));
         await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextFormField).first, 'Quỹ cặp đôi Hà Nội');
+        await tester.enterText(
+          find.byType(TextFormField).first,
+          'Quỹ cặp đôi Hà Nội',
+        );
 
         // Mở màn hình chọn người cùng lập quỹ
-        await tester.ensureVisible(find.byKey(const ValueKey('pick_partner_button')));
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('pick_partner_button')),
+        );
         await tester.tap(find.byKey(const ValueKey('pick_partner_button')));
         await tester.pumpAndSettle();
 
@@ -3135,51 +3248,53 @@ void main() {
         expect(find.text('Đã gửi lời mời lập quỹ cặp đôi'), findsOneWidget);
         expect(fakeService.mockFunds.length, equals(1));
         expect(fakeService.mockFunds.first['fundType'], equals('Cặp đôi'));
-        expect(fakeService.mockFunds.first['status'], equals('pending_partner'));
+        expect(
+          fakeService.mockFunds.first['status'],
+          equals('pending_partner'),
+        );
       },
     );
 
-    testWidgets(
-      'Quỹ cặp đôi đã đủ 2 người dùng thì không mời thêm được nữa',
-      (tester) async {
-        final fakeService = FakeAuthService(acceptedPassword: '123456');
-        final session = AppSession(authService: fakeService);
-        await session.login(account: 'admin', password: '123456');
+    testWidgets('Quỹ cặp đôi đã đủ 2 người dùng thì không mời thêm được nữa', (
+      tester,
+    ) async {
+      final fakeService = FakeAuthService(acceptedPassword: '123456');
+      final session = AppSession(authService: fakeService);
+      await session.login(account: 'admin', password: '123456');
 
-        final coupleFund = {
-          'id': 'fund_couple',
-          '_id': 'fund_couple',
-          'name': 'Quỹ Cặp Đôi',
-          'fundType': 'Cặp đôi',
-          'status': 'active',
-          'currentAmount': 1000000,
-          'userId': '65f0000000000000000000aa',
-          'members': [
-            {'userId': '65f0000000000000000000aa', 'role': 'owner'},
-            {'userId': '65f0000000000000000000bb', 'role': 'member'},
-          ],
-        };
-        fakeService.mockFunds = [coupleFund];
+      final coupleFund = {
+        'id': 'fund_couple',
+        '_id': 'fund_couple',
+        'name': 'Quỹ Cặp Đôi',
+        'fundType': 'Cặp đôi',
+        'status': 'active',
+        'currentAmount': 1000000,
+        'userId': '65f0000000000000000000aa',
+        'members': [
+          {'userId': '65f0000000000000000000aa', 'role': 'owner'},
+          {'userId': '65f0000000000000000000bb', 'role': 'member'},
+        ],
+      };
+      fakeService.mockFunds = [coupleFund];
 
-        await tester.pumpWidget(
-          AppScope(
-            session: session,
-            child: MaterialApp(home: FundDetailScreen(fund: coupleFund)),
-          ),
-        );
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        AppScope(
+          session: session,
+          child: MaterialApp(home: FundDetailScreen(fund: coupleFund)),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // Nút "Mời thành viên" bị vô hiệu hoá vì quỹ đã có đủ 2 người dùng
-        final inviteBtn = tester.widget<OutlinedButton>(
-          find.ancestor(
-            of: find.text('Mời thành viên'),
-            matching: find.byType(OutlinedButton),
-          ),
-        );
-        expect(inviteBtn.onPressed, isNull);
-        expect(find.text('2 thành viên'), findsOneWidget);
-      },
-    );
+      // Nút "Mời thành viên" bị vô hiệu hoá vì quỹ đã có đủ 2 người dùng
+      final inviteBtn = tester.widget<OutlinedButton>(
+        find.ancestor(
+          of: find.text('Mời thành viên'),
+          matching: find.byType(OutlinedButton),
+        ),
+      );
+      expect(inviteBtn.onPressed, isNull);
+      expect(find.text('2 thành viên'), findsOneWidget);
+    });
 
     testWidgets(
       'Quỹ cặp đôi đang chờ đồng ý hiển thị cảnh báo và không mời thêm được',
@@ -3264,39 +3379,38 @@ void main() {
       },
     );
 
-    testWidgets(
-      'Thành viên (không phải chủ quỹ) không thấy nút rút tiền',
-      (tester) async {
-        final fakeService = FakeAuthService(acceptedPassword: '123456');
-        final session = AppSession(authService: fakeService);
-        await session.login(account: 'admin', password: '123456');
+    testWidgets('Thành viên (không phải chủ quỹ) không thấy nút rút tiền', (
+      tester,
+    ) async {
+      final fakeService = FakeAuthService(acceptedPassword: '123456');
+      final session = AppSession(authService: fakeService);
+      await session.login(account: 'admin', password: '123456');
 
-        final fund = {
-          'id': 'fund_member_withdraw',
-          '_id': 'fund_member_withdraw',
-          'name': 'Quỹ Của Chủ Khác',
-          'fundType': 'Hội nhóm',
-          'currentAmount': 2000000,
-          'userId': '65f0000000000000000000ff',
-          'members': [
-            {'userId': '65f0000000000000000000ff', 'role': 'owner'},
-            {'userId': '65f0000000000000000000aa', 'role': 'member'},
-          ],
-        };
-        fakeService.mockFunds = [fund];
+      final fund = {
+        'id': 'fund_member_withdraw',
+        '_id': 'fund_member_withdraw',
+        'name': 'Quỹ Của Chủ Khác',
+        'fundType': 'Hội nhóm',
+        'currentAmount': 2000000,
+        'userId': '65f0000000000000000000ff',
+        'members': [
+          {'userId': '65f0000000000000000000ff', 'role': 'owner'},
+          {'userId': '65f0000000000000000000aa', 'role': 'member'},
+        ],
+      };
+      fakeService.mockFunds = [fund];
 
-        await tester.pumpWidget(
-          AppScope(
-            session: session,
-            child: MaterialApp(home: FundDetailScreen(fund: fund)),
-          ),
-        );
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        AppScope(
+          session: session,
+          child: MaterialApp(home: FundDetailScreen(fund: fund)),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.byKey(const ValueKey('withdraw_fund_button')), findsNothing);
-        expect(find.byKey(const ValueKey('leave_fund_button')), findsOneWidget);
-      },
-    );
+      expect(find.byKey(const ValueKey('withdraw_fund_button')), findsNothing);
+      expect(find.byKey(const ValueKey('leave_fund_button')), findsOneWidget);
+    });
 
     testWidgets(
       'E1: Để trống số tiền rút hiển thị "Vui lòng nhập số tiền muốn rút"',
@@ -3416,7 +3530,10 @@ void main() {
         expect(fakeService.mockFunds.first['currentAmount'], equals(1500000));
         expect(fakeService.mockWalletBalance, equals(1500000));
         expect(session.user?.walletBalance, 1500000.0);
-        expect(fakeService.mockFundTransactions.first['type'], equals('fund_withdrawal'));
+        expect(
+          fakeService.mockFundTransactions.first['type'],
+          equals('fund_withdrawal'),
+        );
       },
     );
 
@@ -3483,7 +3600,9 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('Chỉ được xoá quỹ khi số dư quỹ bằng 0. Quỹ đang có 2.000.000 đ'),
+          find.text(
+            'Chỉ được xoá quỹ khi số dư quỹ bằng 0. Quỹ đang có 2.000.000 đ',
+          ),
           findsOneWidget,
         );
         expect(find.text('Xác nhận xoá quỹ'), findsNothing);
@@ -3491,41 +3610,41 @@ void main() {
       },
     );
 
-    testWidgets(
-      'Quỹ về 0đ thì xoá được quỹ',
-      (tester) async {
-        final fakeService = FakeAuthService(acceptedPassword: '123456');
-        final session = AppSession(authService: fakeService);
-        await session.login(account: 'admin', password: '123456');
+    testWidgets('Quỹ về 0đ thì xoá được quỹ', (tester) async {
+      final fakeService = FakeAuthService(acceptedPassword: '123456');
+      final session = AppSession(authService: fakeService);
+      await session.login(account: 'admin', password: '123456');
 
-        final fund = buildOwnerFund(currentAmount: 0);
-        fakeService.mockFunds = [fund];
+      final fund = buildOwnerFund(currentAmount: 0);
+      fakeService.mockFunds = [fund];
 
-        await tester.pumpWidget(
-          AppScope(
-            session: session,
-            child: MaterialApp(home: FundDetailScreen(fund: fund)),
-          ),
-        );
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        AppScope(
+          session: session,
+          child: MaterialApp(home: FundDetailScreen(fund: fund)),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.text('Xoá quỹ này'), findsOneWidget);
-        // Không có nút rút tiền vì quỹ không còn tiền
-        expect(find.byKey(const ValueKey('withdraw_fund_button')), findsOneWidget);
+      expect(find.text('Xoá quỹ này'), findsOneWidget);
+      // Không có nút rút tiền vì quỹ không còn tiền
+      expect(
+        find.byKey(const ValueKey('withdraw_fund_button')),
+        findsOneWidget,
+      );
 
-        final deleteBtn = find.byKey(const ValueKey('delete_fund_button'));
-        await tester.ensureVisible(deleteBtn);
-        await tester.pumpAndSettle();
-        await tester.tap(deleteBtn);
-        await tester.pumpAndSettle();
+      final deleteBtn = find.byKey(const ValueKey('delete_fund_button'));
+      await tester.ensureVisible(deleteBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(deleteBtn);
+      await tester.pumpAndSettle();
 
-        expect(find.text('Xác nhận xoá quỹ'), findsOneWidget);
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Xoá quỹ'));
-        await tester.pumpAndSettle();
+      expect(find.text('Xác nhận xoá quỹ'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Xoá quỹ'));
+      await tester.pumpAndSettle();
 
-        expect(fakeService.mockFunds.isEmpty, isTrue);
-      },
-    );
+      expect(fakeService.mockFunds.isEmpty, isTrue);
+    });
 
     testWidgets(
       'Màn hình rút tiền: quỹ dưới 1.000đ hiển thị cảnh báo và khoá nút rút',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/api_client.dart';
 import '../state/app_session.dart';
@@ -9,6 +10,8 @@ import 'admin_users_screen.dart';
 import 'fund_screens/funds_screen.dart';
 import 'notifications_sheet.dart';
 import 'profile_screen.dart';
+import 'create_spending_jar_screen.dart';
+import 'spending_jar_detail_screen.dart';
 
 /// Hàm định dạng tiền tệ VND: 0 -> '0 đ', 1000000 -> '1.000.000 đ'
 String formatVnd(dynamic amount) {
@@ -134,9 +137,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 12),
+              const Text(
+                'Chế độ demo: tiền sẽ được cộng ngay vào ví, không thực hiện thanh toán thật.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 10),
               TextField(
                 controller: amountController,
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Số tiền nạp (VND)',
                   prefixIcon: Icon(
@@ -158,15 +169,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 items: const [
                   DropdownMenuItem(
                     value: 'Vietcombank (Liên kết)',
-                    child: Text('Vietcombank (Liên kết)'),
+                    child: Text('Vietcombank (mô phỏng)'),
                   ),
                   DropdownMenuItem(
                     value: 'MB Bank (QR Pay)',
-                    child: Text('MB Bank (QR Pay)'),
+                    child: Text('MB Bank (mô phỏng)'),
                   ),
                   DropdownMenuItem(
                     value: 'Thẻ Quốc tế (Visa/Mastercard)',
-                    child: Text('Thẻ Quốc tế (Visa/Mastercard)'),
+                    child: Text('Thẻ quốc tế (mô phỏng)'),
                   ),
                 ],
                 onChanged: (v) =>
@@ -181,10 +192,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
               const SizedBox(height: 20),
               AppButton(
-                text: 'Xác nhận nạp tiền',
+                text: 'Nạp tiền demo',
                 isLoading: isSubmitting,
                 onPressed: () async {
-                  final amount = double.tryParse(amountController.text);
+                  final amountText = amountController.text
+                      .trim()
+                      .replaceAll('.', '')
+                      .replaceAll(',', '');
+                  final amount = RegExp(r'^\d+$').hasMatch(amountText)
+                      ? double.tryParse(amountText)
+                      : null;
                   if (amount == null || amount <= 0) {
                     setSheetState(
                       () => sheetError = 'Vui lòng nhập số tiền hợp lệ',
@@ -198,18 +215,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   final navigator = Navigator.of(sheetCtx);
                   final messenger = ScaffoldMessenger.of(context);
                   try {
-                    await AppScope.of(context).deposit(
-                      amount: amount,
-                      source: selectedSource,
-                      paymentMethod: 'qr',
-                    );
+                    await AppScope.of(context)
+                        .demoDeposit(amount: amount, source: selectedSource);
                     if (!mounted) return;
                     navigator.pop();
-                    _loadWallet();
+                    await _loadWallet();
+                    if (!mounted) return;
                     messenger.showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Yêu cầu nạp ${amount.toStringAsFixed(0)} đ đã được ghi nhận!',
+                          'Nạp demo ${formatVnd(amount)} thành công!',
                         ),
                       ),
                     );
@@ -704,9 +719,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // --- 5. Màn hình riêng biệt: Quỹ (Không phải dạng pop-up) ---
   Future<void> _openFundsScreen(BuildContext context) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const FundsScreen()),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const FundsScreen()));
     if (mounted) {
       _loadWallet();
     }
@@ -714,85 +728,143 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // --- 6. Bottom Sheet: Hũ chi tiêu ---
   void _showJarsSheet(BuildContext context) {
+    final session = AppScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    var jarsFuture = session.fetchSpendingJars();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheetCtx) => Container(
-        height: MediaQuery.of(sheetCtx).size.height * 0.65,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Hũ chi tiêu (6 Jars)',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => Navigator.of(sheetCtx).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: FutureBuilder<Map<String, dynamic>>(
-                future: AppScope.of(context).fetchSpendingJars(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.lightBlue,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheetState) => Container(
+          height: MediaQuery.of(sheetCtx).size.height * 0.65,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Hũ chi tiêu',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'Thêm hũ chi tiêu',
+                        icon: const Icon(Icons.add_circle_outline_rounded),
+                        onPressed: () async {
+                          final created = await Navigator.of(sheetCtx)
+                              .push<bool>(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const CreateSpendingJarScreen(),
+                                ),
+                              );
+                          if (created == true && mounted) {
+                            setSheetState(() {
+                              jarsFuture = session.fetchSpendingJars();
+                            });
+                            await _loadWallet();
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Tạo hũ mới thành công!'),
+                                ),
+                              );
+                            }
+                          }
+                        },
                       ),
-                    );
-                  }
-                  final list = (snapshot.data?['data'] as List?) ?? [];
-                  if (list.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'Chưa có hũ chi tiêu nào',
-                        style: TextStyle(color: AppColors.textSecondary),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.of(sheetCtx).pop(),
                       ),
-                    );
-                  }
-                  return ListView.builder(
-                    itemCount: list.length,
-                    itemBuilder: (context, index) {
-                      final item = list[index] as Map<String, dynamic>;
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: Colors.teal,
-                            child: Icon(
-                              Icons.all_inbox_rounded,
-                              color: Colors.white,
-                            ),
-                          ),
-                          title: Text(
-                            item['name'] ?? 'Hũ chi tiêu',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          trailing: Text(
-                            '${item['balance'] ?? 0} đ',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: FutureBuilder<Map<String, dynamic>>(
+                  future: jarsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.lightBlue,
                         ),
                       );
-                    },
-                  );
-                },
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          snapshot.error is ApiException
+                              ? (snapshot.error! as ApiException).message
+                              : 'Không thể tải danh sách hũ chi tiêu',
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
+                    final list = (snapshot.data?['data'] as List?) ?? [];
+                    if (list.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'Chưa có hũ chi tiêu nào',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      );
+                    }
+                    return ListView.builder(
+                      itemCount: list.length,
+                      itemBuilder: (context, index) {
+                        final item = list[index] as Map<String, dynamic>;
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              backgroundColor: Colors.teal,
+                              child: Icon(
+                                Icons.all_inbox_rounded,
+                                color: Colors.white,
+                              ),
+                            ),
+                            title: Text(
+                              item['name']?.toString() ?? 'Hũ chi tiêu',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: const Text('Chạm để xem chi tiết'),
+                            trailing: Text(
+                              formatVnd(item['balance']),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onTap: () {
+                              Navigator.of(sheetCtx).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      SpendingJarDetailScreen(jar: item),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -857,7 +929,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.orange.withValues(alpha: 0.15),
+                                      color: Colors.orange.withValues(
+                                        alpha: 0.15,
+                                      ),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
@@ -891,7 +965,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(13),
                                 border: Border.all(
-                                  color: AppColors.lightBlue.withValues(alpha: 0.4),
+                                  color: AppColors.lightBlue.withValues(
+                                    alpha: 0.4,
+                                  ),
                                   width: 1.4,
                                 ),
                                 boxShadow: [
@@ -953,7 +1029,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(13),
                                 border: Border.all(
-                                  color: AppColors.lightBlue.withValues(alpha: 0.4),
+                                  color: AppColors.lightBlue.withValues(
+                                    alpha: 0.4,
+                                  ),
                                   width: 1.4,
                                 ),
                                 boxShadow: [
@@ -1316,7 +1394,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   onTap: () {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (_) => const AdminUsersScreen(),
+                                        builder: (_) =>
+                                            const AdminUsersScreen(),
                                       ),
                                     );
                                   },
@@ -1360,9 +1439,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildAdminSection(BuildContext context) {
     return InkWell(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
-        );
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const AdminUsersScreen()));
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -1413,10 +1491,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SizedBox(height: 2),
                   Text(
                     'Xem danh sách tài khoản & tra cứu người dùng',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF8D6E63),
-                    ),
+                    style: TextStyle(fontSize: 11, color: Color(0xFF8D6E63)),
                   ),
                 ],
               ),
