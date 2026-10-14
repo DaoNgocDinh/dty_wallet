@@ -7,6 +7,7 @@ import '../widgets/app_button.dart';
 import '../widgets/app_logo.dart';
 import 'admin_users_screen.dart';
 import 'fund_screens/funds_screen.dart';
+import 'bill_payment_screen.dart';
 import 'mobile_topup_screen.dart';
 import 'notifications_sheet.dart';
 import 'profile_screen.dart';
@@ -363,165 +364,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- 4. Bottom Sheet: Thanh toán hoá đơn ---
+  // --- 4. Màn hình Thanh toán hóa đơn (Use Case 07 - Cao Thái Tuấn) ---
   void _showBillPaymentSheet(BuildContext context) {
-    final codeController = TextEditingController();
-    final amountController = TextEditingController(text: '350000');
-    final pinController = TextEditingController();
-    String billType = 'Điện (EVN)';
-    bool isSubmitting = false;
-    String? sheetError;
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetCtx) => StatefulBuilder(
-        builder: (context, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Thanh toán hoá đơn',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.of(sheetCtx).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: billType,
-                decoration: const InputDecoration(labelText: 'Loại hoá đơn'),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'Điện (EVN)',
-                    child: Text('Điện (EVN)'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Nước sinh hoạt',
-                    child: Text('Nước sinh hoạt'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Internet / Truyền hình',
-                    child: Text('Internet / Truyền hình'),
-                  ),
-                ],
-                onChanged: (v) => setSheetState(() => billType = v ?? billType),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: codeController,
-                decoration: const InputDecoration(
-                  labelText: 'Mã khách hàng / Hợp đồng',
-                  prefixIcon: Icon(
-                    Icons.badge_outlined,
-                    color: AppColors.lightBlue,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Số tiền thanh toán',
-                  prefixIcon: Icon(
-                    Icons.monetization_on_outlined,
-                    color: AppColors.lightBlue,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: pinController,
-                obscureText: true,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Mã PIN giao dịch',
-                  prefixIcon: Icon(
-                    Icons.pin_outlined,
-                    color: AppColors.lightBlue,
-                  ),
-                  counterText: '',
-                ),
-              ),
-              if (sheetError != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  sheetError!,
-                  style: const TextStyle(color: AppColors.error, fontSize: 13),
-                ),
-              ],
-              const SizedBox(height: 16),
-              AppButton(
-                text: 'Thanh toán hoá đơn',
-                isLoading: isSubmitting,
-                onPressed: () async {
-                  final code = codeController.text.trim();
-                  final amount = double.tryParse(amountController.text) ?? 0;
-                  final pin = pinController.text.trim();
-                  if (code.isEmpty || amount <= 0 || pin.isEmpty) {
-                    setSheetState(
-                      () => sheetError =
-                          'Vui lòng điền đủ mã KH, số tiền và mã PIN',
-                    );
-                    return;
-                  }
-                  setSheetState(() {
-                    isSubmitting = true;
-                    sheetError = null;
-                  });
-                  final navigator = Navigator.of(sheetCtx);
-                  final messenger = ScaffoldMessenger.of(context);
-                  try {
-                    await AppScope.of(context).payBill(
-                      billType: billType,
-                      customerCode: code,
-                      amount: amount,
-                      paymentMethod: 'wallet',
-                      pin: pin,
-                    );
-                    if (!mounted) return;
-                    navigator.pop();
-                    _loadWallet();
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Thanh toán hoá đơn $code thành công!'),
-                      ),
-                    );
-                  } on ApiException catch (e) {
-                    setSheetState(() => sheetError = e.message);
-                  } catch (_) {
-                    setSheetState(
-                      () =>
-                          sheetError = 'Thanh toán thất bại, vui lòng thử lại',
-                    );
-                  } finally {
-                    setSheetState(() => isSubmitting = false);
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const BillPaymentScreen()))
+        .then((_) => _loadWallet());
   }
 
   // --- 5. Màn hình riêng biệt: Quỹ (Không phải dạng pop-up) ---

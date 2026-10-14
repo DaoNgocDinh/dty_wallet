@@ -327,26 +327,62 @@ class AppSession extends ChangeNotifier {
     return res;
   }
 
-  /// Thanh toán hoá đơn.
-  Future<Map<String, dynamic>> payBill({
-    required String billType,
-    required String customerCode,
-    required double amount,
+  /// Lấy thông tin hóa đơn từ API đối tác (Use Case 07 - Bước 8).
+  Future<Map<String, dynamic>> fetchBillInfo({
     required String paymentMethod,
-    required String pin,
-    String? content,
+    String? billType,
+    String? customerCode,
+    String? qrData,
   }) {
     final token = _token;
     if (token == null) throw ApiException('Chưa đăng nhập');
-    return _authService.payBill(
+    return _authService.getBillInfo(
+      token: token,
+      paymentMethod: paymentMethod,
+      billType: billType,
+      customerCode: customerCode,
+      qrData: qrData,
+    );
+  }
+
+  /// Thanh toán hoá đơn (Use Case 07).
+  Future<Map<String, dynamic>> payBill({
+    required String billType,
+    required String customerCode,
+    required String paymentMethod,
+    required String pin,
+    double? amount,
+    String? qrData,
+    String? content,
+  }) async {
+    final token = _token;
+    if (token == null) throw ApiException('Chưa đăng nhập');
+    final res = await _authService.payBill(
       token: token,
       billType: billType,
       customerCode: customerCode,
-      amount: amount,
       paymentMethod: paymentMethod,
       pin: pin,
+      amount: amount,
+      qrData: qrData,
       content: content,
     );
+    // Bước 15: Cập nhật số dư ví sau khi thanh toán thành công
+    if (res['walletBalance'] != null && _user != null) {
+      final newBalance = (res['walletBalance'] as num).toDouble();
+      _user = AuthUser(
+        id: _user!.id,
+        name: _user!.name,
+        email: _user!.email,
+        phoneNumber: _user!.phoneNumber,
+        walletBalance: newBalance,
+        role: _user!.role,
+        createdAt: _user!.createdAt,
+        hasPin: _user!.hasPin,
+      );
+      notifyListeners();
+    }
+    return res;
   }
 
   /// Lấy danh sách ứng viên có thể mời vào quỹ.

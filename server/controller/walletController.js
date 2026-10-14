@@ -213,22 +213,161 @@ exports.mobileTopup = function(type) {
   };
 };
 
-exports.payBill = async function(req, res) {
-  var amount = Number(req.body.amount);
+// Danh sách hóa đơn mẫu cho 4 loại dịch vụ (mô phỏng API đối tác)
+var MOCK_BILLS = [
+  // Điện (EVN)
+  { customerCode: 'EVN001', billType: 'Điện', customerName: 'Nguyễn Văn A', provider: 'Điện lực TP.HCM (EVN)', period: 'Tháng 9/2026', amount: 350000, fee: 0 },
+  { customerCode: 'EVN002', billType: 'Điện', customerName: 'Trần Thị B', provider: 'Điện lực Hà Nội (EVN)', period: 'Tháng 9/2026', amount: 280000, fee: 0 },
+  { customerCode: 'EVN003', billType: 'Điện', customerName: 'Lê Văn C', provider: 'Điện lực Đà Nẵng (EVN)', period: 'Tháng 9/2026', amount: 195000, fee: 0 },
+  // Nước
+  { customerCode: 'WATER001', billType: 'Nước', customerName: 'Phạm Thị D', provider: 'Công ty Cấp nước TP.HCM', period: 'Tháng 9/2026', amount: 120000, fee: 5000 },
+  { customerCode: 'WATER002', billType: 'Nước', customerName: 'Hoàng Văn E', provider: 'Công ty Cấp nước Hà Nội', period: 'Tháng 9/2026', amount: 85000, fee: 5000 },
+  // Internet
+  { customerCode: 'INET001', billType: 'Internet', customerName: 'Vũ Thị F', provider: 'Viettel Telecom', period: 'Tháng 10/2026', amount: 220000, fee: 0 },
+  { customerCode: 'INET002', billType: 'Internet', customerName: 'Đặng Văn G', provider: 'VNPT VinaPhone', period: 'Tháng 10/2026', amount: 180000, fee: 0 },
+  { customerCode: 'INET003', billType: 'Internet', customerName: 'Bùi Thị H', provider: 'FPT Telecom', period: 'Tháng 10/2026', amount: 250000, fee: 0 },
+  // Bảo hiểm
+  { customerCode: 'INS001', billType: 'Bảo hiểm', customerName: 'Ngô Văn I', provider: 'Bảo hiểm Bảo Việt', period: 'Kỳ Quý 4/2026', amount: 1500000, fee: 10000 },
+  { customerCode: 'INS002', billType: 'Bảo hiểm', customerName: 'Trịnh Thị K', provider: 'Prudential Việt Nam', period: 'Tháng 10/2026', amount: 850000, fee: 10000 },
+  // QR mã hóa (dùng cho thanh toán QR)
+  { customerCode: 'QR_EVN001', billType: 'Điện', customerName: 'Lý Văn L', provider: 'Điện lực Bình Dương (EVN)', period: 'Tháng 9/2026', amount: 310000, fee: 0 },
+  { customerCode: 'QR_WATER001', billType: 'Nước', customerName: 'Phùng Thị M', provider: 'Công ty Cấp nước Bình Dương', period: 'Tháng 9/2026', amount: 95000, fee: 5000 },
+];
+
+/**
+ * 2.1.7. Chức năng Thanh toán hóa đơn (Use Case 07 - Cao Thái Tuấn)
+ * Bước 8: Gọi API đối tác để lấy thông tin hóa đơn
+ */
+exports.getBillInfo = async function(req, res) {
   var paymentMethod = String(req.body.paymentMethod || '').trim();
   var billType = String(req.body.billType || '').trim();
   var customerCode = String(req.body.customerCode || '').trim();
-  if (!paymentMethod || !billType || !customerCode || !Number.isFinite(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'paymentMethod, billType, customerCode, and positive amount are required' });
+  var qrData = req.body.qrData ? String(req.body.qrData).trim() : null;
+
+  if (paymentMethod === 'direct' && !customerCode) {
+    return res.status(400).json({
+      code: 'EMPTY_CUSTOMER_CODE',
+      error: 'Mã khách hàng/Mã hóa đơn không được để trống.'
+    });
   }
+
+  if (paymentMethod === 'qr') {
+    if (!qrData) {
+      return res.status(400).json({ code: 'INVALID_QR', error: 'Mã QR không hợp lệ hoặc không thể giải mã.' });
+    }
+    if (!qrData.startsWith('QR_')) {
+      return res.status(400).json({ code: 'INVALID_QR', error: 'Mã QR không hợp lệ hoặc không thể giải mã.' });
+    }
+    customerCode = qrData;
+  }
+
+  var mockPartner = req.headers['x-mock-partner'] || req.body.mockPartner;
+  if (mockPartner === 'timeout' || mockPartner === 'network_error') {
+    return res.status(504).json({ code: 'PARTNER_TIMEOUT', error: 'Không thể kết nối đến hệ thống đối tác. Vui lòng thử lại sau.' });
+  }
+
+  var bill = MOCK_BILLS.find(function(b) {
+    var codeMatch = b.customerCode.toLowerCase() === customerCode.toLowerCase();
+    var typeMatch = !billType || b.billType.toLowerCase() === billType.toLowerCase();
+    return codeMatch && typeMatch;
+  });
+
+  if (!bill) {
+    return res.status(404).json({ code: 'BILL_NOT_FOUND', error: 'Không tìm thấy thông tin hóa đơn. Vui lòng kiểm tra lại mã khách hàng.' });
+  }
+
+  res.json({
+    success: true,
+    bill: { customerCode: bill.customerCode, billType: bill.billType, customerName: bill.customerName, provider: bill.provider, period: bill.period, amount: bill.amount, fee: bill.fee, totalAmount: bill.amount + bill.fee }
+  });
+};
+
+/**
+ * 2.1.7. Chức năng Thanh toán hóa đơn - Bước 14: Xử lý thanh toán
+ */
+exports.payBill = async function(req, res) {
+  var paymentMethod = String(req.body.paymentMethod || '').trim();
+  var billType = String(req.body.billType || '').trim();
+  var customerCode = String(req.body.customerCode || '').trim();
+  var qrData = req.body.qrData ? String(req.body.qrData).trim() : null;
+  var content = req.body.content ? String(req.body.content).trim() : null;
+
+  if (paymentMethod === 'direct' && !customerCode) {
+    return res.status(400).json({ code: 'EMPTY_CUSTOMER_CODE', error: 'Mã khách hàng/Mã hóa đơn không được để trống.' });
+  }
+
+  if (paymentMethod === 'qr') {
+    if (!qrData) {
+      return res.status(400).json({ code: 'INVALID_QR', error: 'Mã QR không hợp lệ hoặc không thể giải mã.' });
+    }
+    if (!qrData.startsWith('QR_')) {
+      return res.status(400).json({ code: 'INVALID_QR', error: 'Mã QR không hợp lệ hoặc không thể giải mã.' });
+    }
+    customerCode = qrData;
+  }
+
+  var mockPartner = req.headers['x-mock-partner'] || req.body.mockPartner;
+  if (mockPartner === 'timeout' || mockPartner === 'network_error') {
+    return res.status(504).json({ code: 'PARTNER_TIMEOUT', error: 'Không thể kết nối đến hệ thống đối tác. Vui lòng thử lại sau.' });
+  }
+
+  var bill = MOCK_BILLS.find(function(b) {
+    var codeMatch = b.customerCode.toLowerCase() === customerCode.toLowerCase();
+    var typeMatch = !billType || b.billType.toLowerCase() === billType.toLowerCase();
+    return codeMatch && typeMatch;
+  });
+
+  if (!bill) {
+    return res.status(404).json({ code: 'BILL_NOT_FOUND', error: 'Không tìm thấy thông tin hóa đơn. Vui lòng kiểm tra lại mã khách hàng.' });
+  }
+
+  var totalAmount = bill.amount + bill.fee;
+
   var user = await verifyPin(req, res);
   if (!user) return;
-  var txn = await createPaymentIntent(user, amount, {
-    type: 'bill_payment', recipient: customerCode, note: req.body.content,
-    metadata: { paymentMethod: paymentMethod, billType: billType, hasQr: Boolean(req.body.qrCode) }
+
+  if (user.walletBalance < totalAmount) {
+    return res.status(400).json({ code: 'INSUFFICIENT_BALANCE', error: 'Số dư không đủ để thực hiện giao dịch.' });
+  }
+
+  user.walletBalance -= totalAmount;
+  await user.save();
+
+  var defaultNote = 'Thanh toán ' + bill.billType + ' - ' + bill.provider + ' kỳ ' + bill.period;
+  var transaction = await Transaction.create({
+    transactionCode: code(),
+    userId: user._id,
+    account: user.email,
+    type: 'bill_payment',
+    amount: totalAmount,
+    sender: user.name || user.email,
+    recipient: bill.provider,
+    status: 'completed',
+    note: content || defaultNote,
+    metadata: {
+      paymentMethod: paymentMethod,
+      billType: bill.billType,
+      customerCode: bill.customerCode,
+      customerName: bill.customerName,
+      provider: bill.provider,
+      period: bill.period,
+      billAmount: bill.amount,
+      fee: bill.fee,
+      totalAmount: totalAmount,
+      hasQr: paymentMethod === 'qr'
+    }
   });
-  res.status(202).json({ message: 'Bill payment recorded as pending; wallet is not debited before provider confirmation', transaction: txn, walletBalance: user.walletBalance });
+
+  res.status(200).json({
+    success: true,
+    message: 'Thanh toán thành công',
+    transaction: transaction,
+    walletBalance: user.walletBalance,
+    bill: { customerCode: bill.customerCode, billType: bill.billType, customerName: bill.customerName, provider: bill.provider, period: bill.period, amount: bill.amount, fee: bill.fee, totalAmount: totalAmount }
+  });
 };
+
+exports.MOCK_BILLS = MOCK_BILLS;
 
 async function verifyPin(req, res) {
   var user = await User.findById(req.user.id).select('+passwordHash +pinHash');

@@ -272,14 +272,34 @@ class AuthService {
         },
       );
 
-  /// Thanh toán hóa đơn (Điện, Nước, Internet...).
+  /// Lấy thông tin hóa đơn từ API đối tác (Use Case 07 - Bước 8).
+  Future<Map<String, dynamic>> getBillInfo({
+    required String token,
+    required String paymentMethod,
+    String? billType,
+    String? customerCode,
+    String? qrData,
+  }) =>
+      _client.post(
+        '/wallet/bill-info',
+        token: token,
+        body: {
+          'paymentMethod': paymentMethod,
+          if (billType != null) 'billType': billType,
+          if (customerCode != null) 'customerCode': customerCode,
+          if (qrData != null) 'qrData': qrData,
+        },
+      );
+
+  /// Thanh toán hóa đơn (Use Case 07 - Bước 14).
   Future<Map<String, dynamic>> payBill({
     required String token,
     required String billType,
     required String customerCode,
-    required double amount,
     required String paymentMethod,
     required String pin,
+    double? amount,
+    String? qrData,
     String? content,
   }) =>
       _client.post(
@@ -288,10 +308,11 @@ class AuthService {
         body: {
           'billType': billType,
           'customerCode': customerCode,
-          'amount': amount,
           'paymentMethod': paymentMethod,
           'pin': pin,
-          'content': ?content,
+          if (amount != null) 'amount': amount,
+          if (qrData != null) 'qrData': qrData,
+          if (content != null) 'content': content,
         },
       );
 

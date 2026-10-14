@@ -2,6 +2,7 @@
 
 import 'package:app/main.dart';
 import 'package:app/screens/admin_users_screen.dart';
+import 'package:app/screens/bill_payment_screen.dart';
 import 'package:app/screens/change_password_screen.dart';
 import 'package:app/screens/create_fund_screen.dart';
 import 'package:app/screens/contribute_fund_screen.dart';
@@ -518,16 +519,136 @@ class FakeAuthService implements AuthService {
     };
   }
 
+  String? mockBillInfoError;
+  String? mockPayBillError;
+  int mockBillPinFailCount = 0;
+
+  @override
+  Future<Map<String, dynamic>> getBillInfo({
+    required String token,
+    required String paymentMethod,
+    String? billType,
+    String? customerCode,
+    String? qrData,
+  }) async {
+    if (mockBillInfoError != null) {
+      throw ApiException(mockBillInfoError!);
+    }
+    if (paymentMethod == 'direct' && (customerCode == null || customerCode.isEmpty)) {
+      throw ApiException(
+        'Mã khách hàng/Mã hóa đơn không được để trống.',
+        code: 'EMPTY_CUSTOMER_CODE',
+      );
+    }
+    if (paymentMethod == 'qr') {
+      if (qrData == null || qrData.isEmpty || !qrData.toUpperCase().startsWith('QR_')) {
+        throw ApiException(
+          'Mã QR không hợp lệ hoặc không thể giải mã.',
+          code: 'INVALID_QR',
+        );
+      }
+      customerCode = qrData;
+    }
+    if (customerCode == 'NOTEXIST') {
+      throw ApiException(
+        'Không tìm thấy thông tin hóa đơn. Vui lòng kiểm tra lại mã khách hàng.',
+        code: 'BILL_NOT_FOUND',
+      );
+    }
+    if (customerCode == 'INS001' || billType == 'Bảo hiểm') {
+      return {
+        'success': true,
+        'bill': {
+          'customerCode': customerCode ?? 'INS001',
+          'billType': 'Bảo hiểm',
+          'customerName': 'Ngô Văn I',
+          'provider': 'Bảo hiểm Bảo Việt',
+          'period': 'Kỳ Quý 4/2026',
+          'amount': 1500000,
+          'fee': 10000,
+          'totalAmount': 1510000,
+        },
+      };
+    }
+    if (paymentMethod == 'qr' || customerCode == 'QR_EVN001') {
+      return {
+        'success': true,
+        'bill': {
+          'customerCode': customerCode ?? 'QR_EVN001',
+          'billType': 'Điện',
+          'customerName': 'Lý Văn L',
+          'provider': 'Điện lực Bình Dương (EVN)',
+          'period': 'Tháng 9/2026',
+          'amount': 310000,
+          'fee': 0,
+          'totalAmount': 310000,
+        },
+      };
+    }
+    return {
+      'success': true,
+      'bill': {
+        'customerCode': customerCode ?? 'EVN001',
+        'billType': billType ?? 'Điện',
+        'customerName': 'Nguyễn Văn A',
+        'provider': 'Điện lực TP.HCM (EVN)',
+        'period': 'Tháng 9/2026',
+        'amount': 350000,
+        'fee': 0,
+        'totalAmount': 350000,
+      },
+    };
+  }
+
   @override
   Future<Map<String, dynamic>> payBill({
     required String token,
     required String billType,
     required String customerCode,
-    required double amount,
     required String paymentMethod,
     required String pin,
+    double? amount,
+    String? qrData,
     String? content,
-  }) async => {'message': 'Bill paid'};
+  }) async {
+    if (mockPayBillError != null) {
+      throw ApiException(mockPayBillError!);
+    }
+    if (pin != '123456') {
+      mockBillPinFailCount++;
+      if (mockBillPinFailCount >= 3) {
+        throw ApiException(
+          'Nhập sai mã PIN quá 3 lần. Giao dịch đã bị hủy và khóa xác thực giao dịch tạm thời.',
+          code: 'PIN_LOCKED',
+        );
+      }
+      throw ApiException('PIN không chính xác.', code: 'WRONG_PIN');
+    }
+    mockBillPinFailCount = 0;
+    final total = amount ?? 350000;
+    if (total > mockWalletBalance) {
+      throw ApiException(
+        'Số dư không đủ để thực hiện giao dịch.',
+        code: 'INSUFFICIENT_BALANCE',
+      );
+    }
+    mockWalletBalance -= total;
+    return {
+      'success': true,
+      'message': 'Thanh toán thành công',
+      'walletBalance': mockWalletBalance,
+      'bill': {
+        'customerCode': customerCode,
+        'billType': billType,
+        'customerName': 'Nguyễn Văn A',
+        'provider': 'Điện lực TP.HCM (EVN)',
+        'period': 'Tháng 9/2026',
+        'amount': total,
+        'fee': 0,
+        'totalAmount': total,
+      },
+    };
+  }
 
   List<Map<String, dynamic>> mockCandidates = [
     {
@@ -4002,6 +4123,355 @@ void main() {
       });
     });
   });
+
+  group('Chức năng Thanh toán hóa đơn (Use Case 07 - Cao Thái Tuấn)', () {
+      testWidgets('Trang chủ: bấm nút "Thanh toán hđ" mở BillPaymentScreen hiển thị 2 hình thức thanh toán', (tester) async {
+        await tester.pumpWidget(buildApp());
+        await _login(tester, account: 'admin', password: '123456');
+
+        final billBtn = find.text('Thanh toán hđ');
+        await tester.ensureVisible(billBtn);
+        await tester.tap(billBtn);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BillPaymentScreen), findsOneWidget);
+        expect(find.text('Chọn hình thức thanh toán'), findsOneWidget);
+        expect(find.text('Thanh toán trực tiếp'), findsOneWidget);
+        expect(find.text('Thanh toán qua QR'), findsOneWidget);
+        expect(find.widgetWithText(AppButton, 'Tiếp tục'), findsOneWidget);
+      });
+
+      testWidgets('Bước 5 & 6: Chọn loại hóa đơn (Điện, Nước, Internet, Bảo hiểm)', (tester) async {
+        final session = AppSession(authService: FakeAuthService(acceptedPassword: '123456'));
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: BillPaymentScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Bước 4: Tiếp tục sang bước chọn loại hóa đơn
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Chọn loại hóa đơn'), findsOneWidget);
+        expect(find.text('Điện'), findsOneWidget);
+        expect(find.text('Nước'), findsOneWidget);
+        expect(find.text('Internet'), findsOneWidget);
+        expect(find.text('Bảo hiểm'), findsOneWidget);
+      });
+
+      testWidgets('Ngoại lệ E3: Mã khách hàng để trống hiển thị thông báo lỗi', (tester) async {
+        final session = AppSession(authService: FakeAuthService(acceptedPassword: '123456'));
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: BillPaymentScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Bước 1 -> Bước 2 -> Bước 3
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Bấm tra cứu khi chưa nhập mã khách hàng
+        await tapButton(tester, 'Tra cứu hóa đơn');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Mã khách hàng/Mã hóa đơn không được để trống.'), findsOneWidget);
+      });
+
+      testWidgets('Luồng thay thế AF1: Bấm quay lại để thay đổi hình thức thanh toán', (tester) async {
+        final session = AppSession(authService: FakeAuthService(acceptedPassword: '123456'));
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: BillPaymentScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Đang ở bước 2, bấm nút back
+        await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+        await tester.pumpAndSettle();
+
+        // Quay lại bước 1
+        expect(find.text('Chọn hình thức thanh toán'), findsOneWidget);
+      });
+
+      testWidgets('Luồng thay thế AF2: Người dùng hủy thanh toán và xác nhận hủy', (tester) async {
+        final session = AppSession(authService: FakeAuthService(acceptedPassword: '123456'));
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: BillPaymentScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Bấm nút Hủy trên AppBar
+        await tester.tap(find.widgetWithText(TextButton, 'Hủy'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Bạn có chắc muốn hủy giao dịch thanh toán hóa đơn này không?'), findsOneWidget);
+
+        // Xác nhận hủy
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Xác nhận hủy'));
+        await tester.pumpAndSettle();
+
+        // Quay về bước 1
+        expect(find.text('Chọn hình thức thanh toán'), findsOneWidget);
+      });
+
+      testWidgets('Ngoại lệ E4: Mã QR không hợp lệ hiển thị thông báo lỗi', (tester) async {
+        final session = AppSession(authService: FakeAuthService(acceptedPassword: '123456'));
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: BillPaymentScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Chọn QR
+        await tester.tap(find.byKey(const Key('method_qr')));
+        await tester.pumpAndSettle();
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Chọn loại HĐ -> Tiếp tục
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Nhập mã QR không hợp lệ (không bắt đầu bằng QR_)
+        await tester.enterText(find.byKey(const Key('qrDataField')), 'INVALID_123');
+        await tapButton(tester, 'Tra cứu hóa đơn');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Mã QR không hợp lệ hoặc không thể giải mã.'), findsOneWidget);
+      });
+
+      testWidgets('Ngoại lệ E5: API đối tác không phản hồi hiển thị thông báo lỗi kết nối', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockBillInfoError = 'Không thể kết nối đến hệ thống đối tác. Vui lòng thử lại sau.';
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: BillPaymentScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byKey(const Key('customerCodeField')), 'EVN001');
+        await tapButton(tester, 'Tra cứu hóa đơn');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Không thể kết nối đến hệ thống đối tác. Vui lòng thử lại sau.'), findsOneWidget);
+      });
+
+      testWidgets('Ngoại lệ E2: Số dư ví không đủ để thanh toán', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockWalletBalance = 200000; // 200k nhỏ hơn hóa đơn 1.510.000đ
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: BillPaymentScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Chọn Bảo hiểm
+        await tester.tap(find.text('Bảo hiểm'));
+        await tester.pumpAndSettle();
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byKey(const Key('customerCodeField')), 'INS001');
+        await tapButton(tester, 'Tra cứu hóa đơn');
+        await tester.pumpAndSettle();
+
+        // Màn hình xác nhận: hiển thị thông báo số dư không đủ
+        expect(find.text('Số dư không đủ để thực hiện giao dịch.'), findsOneWidget);
+      });
+
+      testWidgets('Ngoại lệ E1: Nhập sai PIN 3 lần thì khóa xác thực tạm thời', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockWalletBalance = 1000000;
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: BillPaymentScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byKey(const Key('customerCodeField')), 'EVN001');
+        await tapButton(tester, 'Tra cứu hóa đơn');
+        await tester.pumpAndSettle();
+
+        // Bước 10: Xác nhận thanh toán
+        await tapButton(tester, 'Xác nhận thanh toán');
+        await tester.pumpAndSettle();
+
+        // Nhập sai PIN lần 1
+        await tester.enterText(find.byType(TextField).last, '000000');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+        expect(find.text('PIN không chính xác.'), findsOneWidget);
+
+        // Nhập sai PIN lần 2
+        await tester.enterText(find.byType(TextField).last, '000000');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+
+        // Nhập sai PIN lần 3 -> Khóa
+        await tester.enterText(find.byType(TextField).last, '000000');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Khóa xác thực'), findsOneWidget);
+      });
+
+      testWidgets('Luồng thành công hoàn chỉnh: Thanh toán hóa đơn điện EVN001 trực tiếp 350.000đ', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockWalletBalance = 1000000;
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: BillPaymentScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Bước 1: Tiếp tục với thanh toán trực tiếp
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Bước 2: Chọn Điện -> Tiếp tục
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Bước 3: Nhập mã KH EVN001
+        await tester.enterText(find.byKey(const Key('customerCodeField')), 'EVN001');
+        await tapButton(tester, 'Tra cứu hóa đơn');
+        await tester.pumpAndSettle();
+
+        // Bước 9: Hiển thị thông tin hóa đơn
+        expect(find.text('Nguyễn Văn A'), findsOneWidget);
+        expect(find.text('EVN001'), findsOneWidget);
+        expect(find.text('Tháng 9/2026'), findsOneWidget);
+
+        // Bước 10: Xác nhận thanh toán
+        await tapButton(tester, 'Xác nhận thanh toán');
+        await tester.pumpAndSettle();
+
+        // Bước 11-12: Nhập PIN đúng 123456
+        await tester.enterText(find.byType(TextField).last, '123456');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+
+        // Bước 17: Thông báo "Thanh toán thành công"
+        expect(find.text('Thanh toán thành công'), findsOneWidget);
+        expect(find.text('Hoàn tất'), findsOneWidget);
+
+        // Bước 15: Số dư ví bị trừ 350.000đ (1.000.000 - 350.000 = 650.000)
+        expect(session.user?.walletBalance, equals(650000));
+      });
+
+      testWidgets('Luồng thành công qua mã QR: Quét QR thanh toán hóa đơn điện 310.000đ', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockWalletBalance = 500000;
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: BillPaymentScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Chọn QR
+        await tester.tap(find.byKey(const Key('method_qr')));
+        await tester.pumpAndSettle();
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Chọn Điện -> Tiếp tục
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Bấm icon camera để giả lập quét mã QR
+        await tester.tap(find.byIcon(Icons.camera_alt_rounded));
+        await tester.pumpAndSettle();
+
+        // Tra cứu hóa đơn
+        await tapButton(tester, 'Tra cứu hóa đơn');
+        await tester.pumpAndSettle();
+
+        // Kiểm tra thông tin hóa đơn QR
+        expect(find.text('Lý Văn L'), findsOneWidget);
+
+        // Xác nhận thanh toán
+        await tapButton(tester, 'Xác nhận thanh toán');
+        await tester.pumpAndSettle();
+
+        // Nhập PIN
+        await tester.enterText(find.byType(TextField).last, '123456');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+
+        // Thông báo thành công
+        expect(find.text('Thanh toán thành công'), findsOneWidget);
+        expect(session.user?.walletBalance, equals(190000)); // 500.000 - 310.000 = 190.000
+      });
+    });
 }
 
 /// Đăng nhập từ màn hình đăng nhập với tài khoản cho trước.
