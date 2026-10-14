@@ -153,6 +153,23 @@ class FakeAuthService implements AuthService {
         statusCode: 400,
       );
     }
+    // Quỹ tích luỹ bắt buộc ngày hoàn thành phải sau ngày hiện tại
+    if (fundType == 'Tích lũy' && completionDate != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final compDay = DateTime(
+        completionDate.year,
+        completionDate.month,
+        completionDate.day,
+      );
+      if (!compDay.isAfter(today)) {
+        throw ApiException(
+          'Ngày hoàn thành mục tiêu phải sau ngày hiện tại',
+          code: 'COMPLETION_DATE_MUST_BE_FUTURE',
+          statusCode: 400,
+        );
+      }
+    }
     final newFund = {
       'id': 'fund_${mockFunds.length + 1}',
       'name': name,
@@ -1462,6 +1479,63 @@ void main() {
         expect(fakeService.mockFunds.first['name'], equals('Quỹ mua xe'));
         expect(fakeService.mockFunds.first['fundType'], equals('Tích lũy'));
         expect(fakeService.mockFunds.first['targetAmount'], equals(50000000));
+      },
+    );
+
+    testWidgets(
+      'Quỹ Tích lũy: Không cho phép chọn ngày hôm nay hoặc trước thời điểm hiện tại (chỉ hợp lệ từ ngày mai trở đi)',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: CreateFundScreen(initialFundCount: 0),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Chọn loại Tích lũy
+        await tester.tap(find.text('Tích lũy'));
+        await tester.pumpAndSettle();
+
+        // Nhập thông tin tên và số tiền
+        await tester.enterText(find.byType(TextFormField).at(0), 'Quỹ tương lai');
+        await tester.enterText(find.byType(TextFormField).at(1), '20000000');
+        await tester.pumpAndSettle();
+
+        // Mở DatePicker
+        final datePickerFinder = find.text('Chọn ngày hoàn thành mục tiêu');
+        await tester.ensureVisible(datePickerFinder);
+        await tester.tap(datePickerFinder);
+        await tester.pumpAndSettle();
+
+        // Xác nhận DatePickerDialog hiển thị
+        final datePickerWidget =
+            tester.widget<DatePickerDialog>(find.byType(DatePickerDialog));
+        final now = DateTime.now();
+        final tomorrow = DateTime(now.year, now.month, now.day + 1);
+
+        // firstDate của DatePickerDialog phải đúng là ngày mai (không được chọn hôm nay hoặc quá khứ)
+        expect(datePickerWidget.firstDate.year, equals(tomorrow.year));
+        expect(datePickerWidget.firstDate.month, equals(tomorrow.month));
+        expect(datePickerWidget.firstDate.day, equals(tomorrow.day));
+
+        // Bấm OK để chọn ngày hợp lệ
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+
+        // Bấm Tạo quỹ thành công
+        await tapButton(tester, 'Tạo quỹ');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tạo quỹ thành công'), findsOneWidget);
+        expect(fakeService.mockFunds.length, equals(1));
+        expect(fakeService.mockFunds.first['name'], equals('Quỹ tương lai'));
       },
     );
 
