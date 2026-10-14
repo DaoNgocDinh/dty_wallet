@@ -3756,6 +3756,28 @@ void main() {
             'createdAt': DateTime.now().toIso8601String(),
             'note': 'Góp tiền quỹ du lịch hè',
           },
+          {
+            'id': 'txn_in_pending',
+            '_id': 'txn_in_pending',
+            'type': 'wallet_deposit',
+            'amount': 100000.0,
+            'sender': 'Visa/Mastercard',
+            'recipient': 'nguoidung@gmail.com',
+            'status': 'pending',
+            'transactionCode': 'TXNINPENDING',
+            'createdAt': DateTime.now().toIso8601String(),
+          },
+          {
+            'id': 'txn_out_pending',
+            '_id': 'txn_out_pending',
+            'type': 'mobile_topup',
+            'amount': 50000.0,
+            'sender': 'nguoidung@gmail.com',
+            'recipient': '0339062388',
+            'status': 'pending',
+            'transactionCode': 'TXNOUTPENDING',
+            'createdAt': DateTime.now().toIso8601String(),
+          },
         ];
 
         final session = AppSession(authService: fakeService);
@@ -3781,6 +3803,10 @@ void main() {
         expect(find.text('Tổng ra'), findsOneWidget);
         expect(find.text('+500.000 đ'), findsNWidgets(2));
         expect(find.text('-200.000 đ'), findsNWidgets(2));
+        expect(find.text('+100.000 đ'), findsOneWidget);
+        expect(find.textContaining('Tiền vào (2)'), findsOneWidget);
+        expect(find.textContaining('Tiền ra (2)'), findsOneWidget);
+        expect(find.textContaining('Tất cả (4)'), findsOneWidget);
 
         // Kiểm tra các nhãn Tiền vào và Tiền ra
         expect(find.text('Tiền vào'), findsWidgets);
@@ -3789,6 +3815,7 @@ void main() {
         // Kiểm tra hiển thị tiêu đề các giao dịch
         expect(find.text('Nạp ví (MB Bank)'), findsOneWidget);
         expect(find.text('Góp quỹ: Quỹ du lịch'), findsOneWidget);
+        expect(find.text('Nạp ví (Visa/Mastercard)'), findsOneWidget);
 
         // Kiểm tra số tiền với dấu + và -
         expect(find.text('+500.000 đ'), findsWidgets); // cả ở summary và item
@@ -3799,7 +3826,7 @@ void main() {
         expect(find.byIcon(Icons.north_east_rounded), findsWidgets);
 
         // Kiểm tra bộ lọc: Bấm tab 'Tiền vào'
-        await tester.tap(find.textContaining('Tiền vào (1)'));
+        await tester.tap(find.textContaining('Tiền vào (2)'));
         await tester.pumpAndSettle();
 
         // Chỉ hiển thị giao dịch tiền vào, ẩn giao dịch tiền ra
@@ -3807,7 +3834,7 @@ void main() {
         expect(find.text('Góp quỹ: Quỹ du lịch'), findsNothing);
 
         // Kiểm tra bộ lọc: Bấm tab 'Tiền ra'
-        await tester.tap(find.textContaining('Tiền ra (1)'));
+        await tester.tap(find.textContaining('Tiền ra (2)'));
         await tester.pumpAndSettle();
 
         // Chỉ hiển thị giao dịch tiền ra, ẩn giao dịch tiền vào
@@ -3815,7 +3842,7 @@ void main() {
         expect(find.text('Nạp ví (MB Bank)'), findsNothing);
 
         // Kiểm tra bộ lọc: Bấm tab 'Tất cả'
-        await tester.tap(find.textContaining('Tất cả (2)'));
+        await tester.tap(find.textContaining('Tất cả (4)'));
         await tester.pumpAndSettle();
 
         // Cả 2 giao dịch hiển thị lại

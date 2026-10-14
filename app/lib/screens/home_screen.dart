@@ -1956,11 +1956,13 @@ class _TransactionHistorySheetState extends State<_TransactionHistorySheet> {
 
                 for (final item in list) {
                   final amt = (item['amount'] as num?)?.toDouble() ?? 0;
+                  final isPending =
+                      item['status']?.toString().toLowerCase() == 'pending';
                   if (_isIncoming(item, userEmail)) {
-                    totalIn += amt;
+                    if (!isPending) totalIn += amt;
                     countIn++;
                   } else {
-                    totalOut += amt;
+                    if (!isPending) totalOut += amt;
                     countOut++;
                   }
                 }
@@ -2487,4 +2489,3 @@ class _TransactionHistorySheetState extends State<_TransactionHistorySheet> {
     );
   }
 }
-
