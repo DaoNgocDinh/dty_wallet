@@ -61,6 +61,17 @@ exports.create = async function(req, res) {
     if (Number.isNaN(completionDate.getTime())) {
       return res.status(400).json({ error: 'Vui lòng chọn ngày hoàn thành mục tiêu', field: 'completionDate', code: 'INVALID_COMPLETION_DATE' });
     }
+    // Quỹ tích luỹ: Ngày hoàn thành mục tiêu phải sau ngày hiện tại (từ ngày mai trở đi)
+    var now = new Date();
+    var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var compDay = new Date(completionDate.getFullYear(), completionDate.getMonth(), completionDate.getDate());
+    if (compDay.getTime() <= todayStart.getTime()) {
+      return res.status(400).json({
+        error: 'Ngày hoàn thành mục tiêu phải sau ngày hiện tại',
+        field: 'completionDate',
+        code: 'COMPLETION_DATE_MUST_BE_FUTURE'
+      });
+    }
   } else {
     if (req.body.targetAmount !== undefined && req.body.targetAmount !== null && String(req.body.targetAmount).trim() !== '') {
       targetAmount = Number(req.body.targetAmount);
