@@ -12,10 +12,7 @@ import 'withdraw_fund_screen.dart';
 
 /// Màn hình Chi tiết quỹ (Có giao diện riêng khi ấn vào quỹ tương ứng)
 class FundDetailScreen extends StatefulWidget {
-  const FundDetailScreen({
-    super.key,
-    required this.fund,
-  });
+  const FundDetailScreen({super.key, required this.fund});
 
   final Map<String, dynamic> fund;
 
@@ -81,9 +78,7 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
   /// Mở màn hình Góp tiền vào quỹ - Use Case 05
   Future<void> _openContributeScreen() async {
     final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ContributeFundScreen(fund: _fund),
-      ),
+      MaterialPageRoute(builder: (_) => ContributeFundScreen(fund: _fund)),
     );
 
     if (result != null) {
@@ -96,11 +91,9 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
 
   /// Mở màn hình Rút tiền từ quỹ (chỉ chủ quỹ)
   Future<void> _openWithdrawScreen() async {
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => WithdrawFundScreen(fund: _fund),
-      ),
-    );
+    final result = await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => WithdrawFundScreen(fund: _fund)));
 
     if (result != null) {
       if (result is Map<String, dynamic>) {
@@ -139,7 +132,9 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
               children: [
                 Icon(Icons.info_outline_rounded, color: Colors.white),
                 SizedBox(width: 8),
-                Expanded(child: Text('Quỹ cặp đôi đang chờ người được chọn đồng ý')),
+                Expanded(
+                  child: Text('Quỹ cặp đôi đang chờ người được chọn đồng ý'),
+                ),
               ],
             ),
             backgroundColor: Color(0xFFC62828),
@@ -166,11 +161,9 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
       }
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => InviteMemberScreen(fund: _fund),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => InviteMemberScreen(fund: _fund)));
   }
 
   String get _fundStatus => _fund['status']?.toString() ?? 'active';
@@ -265,7 +258,11 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Color(0xFFC62828), size: 24),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFC62828),
+              size: 24,
+            ),
             SizedBox(width: 8),
             Text(
               'Xác nhận xoá quỹ',
@@ -430,7 +427,9 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
     final currentAmount = (_fund['currentAmount'] as num?)?.toDouble() ?? 0;
     final targetAmount = (_fund['targetAmount'] as num?)?.toDouble() ?? 0;
     final hasTarget = targetAmount > 0;
-    final progress = hasTarget ? (currentAmount / targetAmount).clamp(0.0, 1.0) : 0.0;
+    final progress = hasTarget
+        ? (currentAmount / targetAmount).clamp(0.0, 1.0)
+        : 0.0;
     final completionDate = _fund['completionDate'];
 
     return Scaffold(
@@ -473,7 +472,10 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                   const SizedBox(height: 4),
                   const Text(
                     'Thông tin chi tiết và lịch sử đóng góp quỹ',
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 14),
 
@@ -494,7 +496,8 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
-                                  color: const Color(0xFFE53935).withValues(alpha: 0.3),
+                                  color: const Color(0xFFE53935)
+                                      .withValues(alpha: 0.3),
                                   width: 1.2,
                                 ),
                                 boxShadow: [
@@ -509,14 +512,18 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Container(
                                         width: 50,
                                         height: 50,
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFE53935).withValues(alpha: 0.12),
-                                          borderRadius: BorderRadius.circular(14),
+                                          color: const Color(0xFFE53935)
+                                              .withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
                                         ),
                                         child: const Icon(
                                           Icons.savings_rounded,
@@ -527,7 +534,8 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                       const SizedBox(width: 14),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               name,
@@ -539,13 +547,15 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                             ),
                                             const SizedBox(height: 4),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 3,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 3,
+                                                  ),
                                               decoration: BoxDecoration(
                                                 color: Colors.grey.shade100,
-                                                borderRadius: BorderRadius.circular(6),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
                                               ),
                                               child: Text(
                                                 fundType,
@@ -587,7 +597,8 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                   if (hasTarget) ...[
                                     const SizedBox(height: 14),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
                                           child: Text(
@@ -618,9 +629,10 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                         value: progress,
                                         minHeight: 8,
                                         backgroundColor: Colors.grey.shade200,
-                                        valueColor: const AlwaysStoppedAnimation<Color>(
-                                          Color(0xFF2E7D32),
-                                        ),
+                                        valueColor:
+                                            const AlwaysStoppedAnimation<Color>(
+                                              Color(0xFF2E7D32),
+                                            ),
                                       ),
                                     ),
                                     const SizedBox(height: 8),
@@ -673,7 +685,9 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFFF8E1),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFFFFE082)),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFE082),
+                                  ),
                                 ),
                                 child: const Row(
                                   children: [
@@ -716,16 +730,29 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                   child: OutlinedButton.icon(
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: AppColors.lightBlue,
-                                      side: const BorderSide(color: AppColors.lightBlue, width: 1.4),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      side: const BorderSide(
+                                        color: AppColors.lightBlue,
+                                        width: 1.4,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
                                       minimumSize: const Size(0, 48),
                                     ),
-                                    icon: const Icon(Icons.person_add_rounded, size: 19),
+                                    icon: const Icon(
+                                      Icons.person_add_rounded,
+                                      size: 19,
+                                    ),
                                     label: const Text(
                                       'Mời thành viên',
-                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                    onPressed: _canInviteMore ? _openInviteScreen : null,
+                                    onPressed: _canInviteMore
+                                        ? _openInviteScreen
+                                        : null,
                                   ),
                                 ),
                               ],
@@ -738,17 +765,31 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                 key: const ValueKey('withdraw_fund_button'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF2E7D32),
-                                  side: const BorderSide(color: Color(0xFFA5D6A7), width: 1.2),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  side: const BorderSide(
+                                    color: Color(0xFFA5D6A7),
+                                    width: 1.2,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   minimumSize: const Size(double.infinity, 42),
-                                  backgroundColor: const Color(0xFFE8F5E9).withValues(alpha: 0.6),
+                                  backgroundColor: const Color(0xFFE8F5E9)
+                                      .withValues(alpha: 0.6),
                                 ),
-                                icon: const Icon(Icons.savings_outlined, size: 19),
+                                icon: const Icon(
+                                  Icons.savings_outlined,
+                                  size: 19,
+                                ),
                                 label: const Text(
                                   'Rút tiền về ví',
-                                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                                onPressed: currentAmount > 0 ? _openWithdrawScreen : null,
+                                onPressed: currentAmount > 0
+                                    ? _openWithdrawScreen
+                                    : null,
                               ),
                             ],
 
@@ -773,9 +814,13 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                   minimumSize: const Size(double.infinity, 42),
                                   backgroundColor: currentAmount > 0
                                       ? Colors.grey.shade100
-                                      : const Color(0xFFFFEBEE).withValues(alpha: 0.5),
+                                      : const Color(0xFFFFEBEE)
+                                            .withValues(alpha: 0.5),
                                 ),
-                                icon: const Icon(Icons.delete_outline_rounded, size: 19),
+                                icon: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 19,
+                                ),
                                 label: Text(
                                   currentAmount > 0
                                       ? 'Rút hết tiền mới xoá được quỹ'
@@ -793,15 +838,27 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                 key: const ValueKey('leave_fund_button'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFFD84315),
-                                  side: const BorderSide(color: Color(0xFFFFCCBC), width: 1.2),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  side: const BorderSide(
+                                    color: Color(0xFFFFCCBC),
+                                    width: 1.2,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   minimumSize: const Size(double.infinity, 42),
-                                  backgroundColor: const Color(0xFFFBE9E7).withValues(alpha: 0.5),
+                                  backgroundColor: const Color(0xFFFBE9E7)
+                                      .withValues(alpha: 0.5),
                                 ),
-                                icon: const Icon(Icons.exit_to_app_rounded, size: 19),
+                                icon: const Icon(
+                                  Icons.exit_to_app_rounded,
+                                  size: 19,
+                                ),
                                 label: const Text(
                                   'Rời khỏi quỹ',
-                                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 onPressed: _confirmLeaveFund,
                               ),
@@ -847,12 +904,19 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                 ),
                                 child: const Row(
                                   children: [
-                                    Icon(Icons.people_outline_rounded, color: AppColors.textSecondary, size: 20),
+                                    Icon(
+                                      Icons.people_outline_rounded,
+                                      color: AppColors.textSecondary,
+                                      size: 20,
+                                    ),
                                     SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
                                         'Chưa có danh sách thành viên',
-                                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.textSecondary,
+                                        ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -864,21 +928,31 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: _members.length,
-                                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
                                   final m = _members[index];
                                   final mId = _getMemberUserId(m);
                                   final mName = _getMemberName(m);
                                   final mSubtitle = _getMemberSubtitle(m);
-                                  final isThisOwner = m['role'] == 'owner' || (mId.isNotEmpty && mId == _ownerId);
-                                  final isMe = currentUserId.isNotEmpty && mId == currentUserId;
+                                  final isThisOwner =
+                                      m['role'] == 'owner' ||
+                                      (mId.isNotEmpty && mId == _ownerId);
+                                  final isMe =
+                                      currentUserId.isNotEmpty &&
+                                      mId == currentUserId;
 
                                   return Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 10,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: AppColors.border),
+                                      border: Border.all(
+                                        color: AppColors.border,
+                                      ),
                                     ),
                                     child: Row(
                                       children: [
@@ -888,7 +962,9 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                               ? const Color(0xFFFFF3E0)
                                               : const Color(0xFFE3F2FD),
                                           child: Text(
-                                            mName.isNotEmpty ? mName[0].toUpperCase() : '?',
+                                            mName.isNotEmpty
+                                                ? mName[0].toUpperCase()
+                                                : '?',
                                             style: TextStyle(
                                               fontSize: 15,
                                               fontWeight: FontWeight.bold,
@@ -901,7 +977,8 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Row(
                                                 children: [
@@ -910,49 +987,71 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                                       mName,
                                                       style: const TextStyle(
                                                         fontSize: 14,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: AppColors.textPrimary,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: AppColors
+                                                            .textPrimary,
                                                       ),
-                                                      overflow: TextOverflow.ellipsis,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                     ),
                                                   ),
                                                   if (isMe) ...[
                                                     const SizedBox(width: 6),
                                                     Container(
-                                                      padding: const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 1.5,
-                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 1.5,
+                                                          ),
                                                       decoration: BoxDecoration(
-                                                        color: AppColors.lightBlue.withValues(alpha: 0.12),
-                                                        borderRadius: BorderRadius.circular(4),
+                                                        color: AppColors
+                                                            .lightBlue
+                                                            .withValues(
+                                                              alpha: 0.12,
+                                                            ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              4,
+                                                            ),
                                                       ),
                                                       child: const Text(
                                                         'Bạn',
                                                         style: TextStyle(
                                                           fontSize: 10.5,
-                                                          fontWeight: FontWeight.w600,
-                                                          color: AppColors.lightBlueDark,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: AppColors
+                                                              .lightBlueDark,
                                                         ),
                                                       ),
                                                     ),
                                                   ] else ...[
                                                     const SizedBox(width: 6),
                                                     Container(
-                                                      padding: const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 1.5,
-                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 1.5,
+                                                          ),
                                                       decoration: BoxDecoration(
-                                                        color: const Color(0xFFE8F5E9),
-                                                        borderRadius: BorderRadius.circular(4),
+                                                        color: const Color(
+                                                          0xFFE8F5E9,
+                                                        ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              4,
+                                                            ),
                                                       ),
                                                       child: const Text(
                                                         'Góp quỹ',
                                                         style: TextStyle(
                                                           fontSize: 10.5,
-                                                          fontWeight: FontWeight.w600,
-                                                          color: Color(0xFF2E7D32),
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Color(
+                                                            0xFF2E7D32,
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
@@ -965,9 +1064,11 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                                   mSubtitle,
                                                   style: const TextStyle(
                                                     fontSize: 11.5,
-                                                    color: AppColors.textSecondary,
+                                                    color:
+                                                        AppColors.textSecondary,
                                                   ),
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ],
                                             ],
@@ -983,7 +1084,9 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                             color: isThisOwner
                                                 ? const Color(0xFFFFF3E0)
                                                 : const Color(0xFFF5F5F5),
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                             border: Border.all(
                                               color: isThisOwner
                                                   ? const Color(0xFFFFB74D)
@@ -1005,7 +1108,9 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
-                                                isThisOwner ? 'Chủ quỹ' : 'Thành viên',
+                                                isThisOwner
+                                                    ? 'Chủ quỹ'
+                                                    : 'Thành viên',
                                                 style: TextStyle(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w600,
@@ -1098,32 +1203,42 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: _transactions.length,
-                                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
                                   final txn = _transactions[index];
                                   final amt = txn['amount'];
-                                  final sender = txn['sender']?.toString() ?? 'Thành viên';
+                                  final sender =
+                                      txn['sender']?.toString() ?? 'Thành viên';
                                   final note = txn['note']?.toString() ?? '';
                                   final date = _formatDate(txn['createdAt']);
                                   final isWithdrawal =
-                                      txn['type']?.toString() == 'fund_withdrawal';
+                                      txn['type']?.toString() ==
+                                      'fund_withdrawal';
 
                                   return Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: AppColors.border),
+                                      border: Border.all(
+                                        color: AppColors.border,
+                                      ),
                                     ),
                                     child: Row(
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color: (isWithdrawal
-                                                    ? const Color(0xFFC62828)
-                                                    : const Color(0xFF2E7D32))
-                                                .withValues(alpha: 0.1),
+                                            color:
+                                                (isWithdrawal
+                                                        ? const Color(
+                                                            0xFFC62828,
+                                                          )
+                                                        : const Color(
+                                                            0xFF2E7D32,
+                                                          ))
+                                                    .withValues(alpha: 0.1),
                                             shape: BoxShape.circle,
                                           ),
                                           child: Icon(
@@ -1139,7 +1254,8 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Row(
                                                 children: [
@@ -1148,28 +1264,39 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                                       sender,
                                                       style: const TextStyle(
                                                         fontSize: 13.5,
-                                                        fontWeight: FontWeight.bold,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                       ),
-                                                      overflow: TextOverflow.ellipsis,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                     ),
                                                   ),
                                                   if (isWithdrawal) ...[
                                                     const SizedBox(width: 6),
                                                     Container(
-                                                      padding: const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 1.5,
-                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 1.5,
+                                                          ),
                                                       decoration: BoxDecoration(
-                                                        color: const Color(0xFFFFEBEE),
-                                                        borderRadius: BorderRadius.circular(4),
+                                                        color: const Color(
+                                                          0xFFFFEBEE,
+                                                        ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              4,
+                                                            ),
                                                       ),
                                                       child: const Text(
                                                         'Rút tiền',
                                                         style: TextStyle(
                                                           fontSize: 10.5,
-                                                          fontWeight: FontWeight.w600,
-                                                          color: Color(0xFFC62828),
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Color(
+                                                            0xFFC62828,
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
@@ -1182,9 +1309,11 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                                   note,
                                                   style: const TextStyle(
                                                     fontSize: 12,
-                                                    color: AppColors.textSecondary,
+                                                    color:
+                                                        AppColors.textSecondary,
                                                   ),
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ],
                                               if (date.isNotEmpty) ...[
