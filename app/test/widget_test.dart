@@ -122,8 +122,11 @@ class FakeAuthService implements AuthService {
     };
   }
 
+  List<Map<String, dynamic>> mockTransactions = [];
+
   @override
-  Future<Map<String, dynamic>> transactions(String token) async => {'data': []};
+  Future<Map<String, dynamic>> transactions(String token) async =>
+      {'data': mockTransactions};
 
   List<Map<String, dynamic>> mockFunds = [];
 
@@ -3556,6 +3559,280 @@ void main() {
           find.widgetWithText(AppButton, 'Rút tiền'),
         );
         expect(withdrawBtn.onPressed, isNull);
+      },
+    );
+
+    testWidgets(
+      'Giao diện danh sách quỹ FundsScreen: hiển thị chính xác số dư hiện có (500.000 đ) thay vì 0đ',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockFunds = [
+          {
+            'id': 'fund_test_nap',
+            '_id': 'fund_test_nap',
+            'name': 'test nạp',
+            'fundType': 'Cá nhân',
+            'currentAmount': 500000,
+            'targetAmount': 0,
+          },
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: FundsScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Kiểm tra bên ngoài danh sách quỹ hiển thị 500.000 đ (thay vì 0 đ)
+        expect(find.text('test nạp'), findsOneWidget);
+        expect(find.text('500.000 đ'), findsOneWidget);
+        expect(find.text('0 đ'), findsNothing);
+
+        // Bấm vào chi tiết quỹ cũng hiển thị 500.000 đ
+        await tester.tap(find.text('test nạp'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FundDetailScreen), findsOneWidget);
+        expect(find.text('500.000 đ'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Lịch sử giao dịch ví: Phân biệt rõ tiền vào (+) và tiền ra (-), icon và màu sắc khác nhau, bộ lọc tab hoạt động đúng',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockTransactions = [
+          {
+            'id': 'txn_in_1',
+            '_id': 'txn_in_1',
+            'type': 'wallet_deposit',
+            'amount': 500000.0,
+            'sender': 'MB Bank',
+            'recipient': 'nguoidung@gmail.com',
+            'status': 'completed',
+            'transactionCode': 'TXNIN001',
+            'createdAt': DateTime.now().toIso8601String(),
+            'note': 'Nạp tiền từ MB Bank',
+          },
+          {
+            'id': 'txn_out_1',
+            '_id': 'txn_out_1',
+            'type': 'fund_contribution',
+            'amount': 200000.0,
+            'sender': 'nguoidung@gmail.com',
+            'recipient': 'Quỹ du lịch',
+            'metadata': {'fundName': 'Quỹ du lịch'},
+            'status': 'completed',
+            'transactionCode': 'TXNOUT001',
+            'createdAt': DateTime.now().toIso8601String(),
+            'note': 'Góp tiền quỹ du lịch hè',
+          },
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'nguoidung', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: HomeScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Mở Lịch sử giao dịch bằng cách bấm nút 'L.sử giao dịch'
+        await tester.tap(find.text('L.sử giao dịch'));
+        await tester.pumpAndSettle();
+
+        // Kiểm tra tiêu đề Lịch sử giao dịch
+        expect(find.text('Lịch sử giao dịch'), findsWidgets);
+
+        // Kiểm tra vùng tổng quan Tổng vào (+500.000 đ) và Tổng ra (-200.000 đ)
+        expect(find.text('Tổng vào'), findsOneWidget);
+        expect(find.text('Tổng ra'), findsOneWidget);
+        expect(find.text('+500.000 đ'), findsNWidgets(2));
+        expect(find.text('-200.000 đ'), findsNWidgets(2));
+
+        // Kiểm tra các nhãn Tiền vào và Tiền ra
+        expect(find.text('Tiền vào'), findsWidgets);
+        expect(find.text('Tiền ra'), findsWidgets);
+
+        // Kiểm tra hiển thị tiêu đề các giao dịch
+        expect(find.text('Nạp ví (MB Bank)'), findsOneWidget);
+        expect(find.text('Góp quỹ: Quỹ du lịch'), findsOneWidget);
+
+        // Kiểm tra số tiền với dấu + và -
+        expect(find.text('+500.000 đ'), findsWidgets); // cả ở summary và item
+        expect(find.text('-200.000 đ'), findsWidgets); // cả ở summary và item
+
+        // Kiểm tra các icon tiền vào và tiền ra
+        expect(find.byIcon(Icons.south_west_rounded), findsWidgets);
+        expect(find.byIcon(Icons.north_east_rounded), findsWidgets);
+
+        // Kiểm tra bộ lọc: Bấm tab 'Tiền vào'
+        await tester.tap(find.textContaining('Tiền vào (1)'));
+        await tester.pumpAndSettle();
+
+        // Chỉ hiển thị giao dịch tiền vào, ẩn giao dịch tiền ra
+        expect(find.text('Nạp ví (MB Bank)'), findsOneWidget);
+        expect(find.text('Góp quỹ: Quỹ du lịch'), findsNothing);
+
+        // Kiểm tra bộ lọc: Bấm tab 'Tiền ra'
+        await tester.tap(find.textContaining('Tiền ra (1)'));
+        await tester.pumpAndSettle();
+
+        // Chỉ hiển thị giao dịch tiền ra, ẩn giao dịch tiền vào
+        expect(find.text('Góp quỹ: Quỹ du lịch'), findsOneWidget);
+        expect(find.text('Nạp ví (MB Bank)'), findsNothing);
+
+        // Kiểm tra bộ lọc: Bấm tab 'Tất cả'
+        await tester.tap(find.textContaining('Tất cả (2)'));
+        await tester.pumpAndSettle();
+
+        // Cả 2 giao dịch hiển thị lại
+        expect(find.text('Nạp ví (MB Bank)'), findsOneWidget);
+        expect(find.text('Góp quỹ: Quỹ du lịch'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Lịch sử giao dịch ví: Tìm kiếm giao dịch theo từ khoá, số tiền, mã giao dịch và xoá tìm kiếm',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockTransactions = [
+          {
+            'id': 'txn_in_1',
+            '_id': 'txn_in_1',
+            'type': 'wallet_deposit',
+            'amount': 500000.0,
+            'sender': 'MB Bank',
+            'recipient': 'nguoidung@gmail.com',
+            'status': 'completed',
+            'transactionCode': 'TXNIN001',
+            'createdAt': DateTime.now().toIso8601String(),
+            'note': 'Nạp tiền từ MB Bank',
+          },
+          {
+            'id': 'txn_out_1',
+            '_id': 'txn_out_1',
+            'type': 'fund_contribution',
+            'amount': 200000.0,
+            'sender': 'nguoidung@gmail.com',
+            'recipient': 'Quỹ du lịch',
+            'metadata': {'fundName': 'Quỹ du lịch'},
+            'status': 'completed',
+            'transactionCode': 'TXNOUT001',
+            'createdAt': DateTime.now().toIso8601String(),
+            'note': 'Góp tiền quỹ du lịch hè',
+          },
+        ];
+
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'nguoidung', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: HomeScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Mở Lịch sử giao dịch
+        await tester.tap(find.text('L.sử giao dịch'));
+        await tester.pumpAndSettle();
+
+        // Kiểm tra sự xuất hiện của ô tìm kiếm
+        expect(find.byType(TextField), findsOneWidget);
+        expect(find.text('Tìm theo tên, mã giao dịch, số tiền, ghi chú...'), findsOneWidget);
+
+        // 1. Tìm theo tên ngân hàng/nguồn tiền: 'MB Bank'
+        await tester.enterText(find.byType(TextField), 'MB Bank');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nạp ví (MB Bank)'), findsOneWidget);
+        expect(find.text('Góp quỹ: Quỹ du lịch'), findsNothing);
+
+        // 2. Tìm theo số tiền: '200'
+        await tester.enterText(find.byType(TextField), '200');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Góp quỹ: Quỹ du lịch'), findsOneWidget);
+        expect(find.text('Nạp ví (MB Bank)'), findsNothing);
+
+        // 3. Tìm từ khoá không khớp: 'không tồn tại xyz'
+        await tester.enterText(find.byType(TextField), 'xyz_not_found');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Không tìm thấy giao dịch nào phù hợp'), findsOneWidget);
+        expect(find.textContaining('Không có kết quả cho "xyz_not_found"'), findsOneWidget);
+        expect(find.text('Xoá tìm kiếm'), findsOneWidget);
+
+        // 4. Bấm 'Xoá tìm kiếm' để trở về danh sách đầy đủ
+        await tester.tap(find.text('Xoá tìm kiếm'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nạp ví (MB Bank)'), findsOneWidget);
+        expect(find.text('Góp quỹ: Quỹ du lịch'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Chi tiết quỹ: Hiển thị phân biệt rõ giao dịch Góp quỹ (màu xanh, icon vào) và Rút tiền (màu đỏ, icon ra)',
+      (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        final fund = buildOwnerFund(currentAmount: 1500000);
+        fakeService.mockFunds = [fund];
+        fakeService.mockFundTransactions = [
+          {
+            'id': 'txn_contrib_1',
+            '_id': 'txn_contrib_1',
+            'fundId': fund['id'],
+            'type': 'fund_contribution',
+            'amount': 1000000.0,
+            'sender': 'Nguyễn Văn A',
+            'note': 'Góp quỹ tháng 10',
+            'createdAt': DateTime.now().toIso8601String(),
+          },
+          {
+            'id': 'txn_withdr_1',
+            '_id': 'txn_withdr_1',
+            'fundId': fund['id'],
+            'type': 'fund_withdrawal',
+            'amount': 300000.0,
+            'sender': 'Chủ quỹ admin',
+            'note': 'Rút tiền mua quà',
+            'createdAt': DateTime.now().toIso8601String(),
+          },
+        ];
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: MaterialApp(home: FundDetailScreen(fund: fund)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Kiểm tra huy hiệu Góp quỹ và Rút tiền
+        expect(find.text('Góp quỹ'), findsOneWidget);
+        expect(find.text('Rút tiền'), findsOneWidget);
+
+        // Kiểm tra số tiền với dấu + và -
+        expect(find.text('+1.000.000 đ'), findsOneWidget);
+        expect(find.text('-300.000 đ'), findsOneWidget);
+
+        // Kiểm tra icon vào (arrow_downward) và ra (arrow_upward)
+        expect(find.byIcon(Icons.arrow_downward_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
       },
     );
   });

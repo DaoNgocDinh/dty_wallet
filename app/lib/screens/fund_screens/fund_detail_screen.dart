@@ -936,6 +936,26 @@ class _FundDetailScreenState extends State<FundDetailScreen> {
                                                         ),
                                                       ),
                                                     ),
+                                                  ] else ...[
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 1.5,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFE8F5E9),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: const Text(
+                                                        'Góp quỹ',
+                                                        style: TextStyle(
+                                                          fontSize: 10.5,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Color(0xFF2E7D32),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ],
                                                 ],
                                               ),
