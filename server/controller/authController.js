@@ -120,23 +120,70 @@ exports.logout = function(req, res) {
 exports.changePassword = async function(req, res) {
   var currentPassword = req.body.currentPassword;
   var newPassword = req.body.newPassword;
-  if (!currentPassword || typeof newPassword !== 'string' || newPassword.length < security.minPasswordLength) {
+  var confirmNewPassword = req.body.confirmNewPassword;
+
+  if (typeof currentPassword !== 'string' || currentPassword.length === 0) {
     return res.status(400).json({
-      code: 'INVALID_INPUT',
-      error: 'currentPassword and newPassword (at least ' + security.minPasswordLength + ' characters) are required'
+      code: 'CURRENT_PASSWORD_REQUIRED',
+      error: 'Mật khẩu hiện tại không được bỏ trống.'
     });
   }
-  if (newPassword !== req.body.confirmNewPassword) {
-    return res.status(400).json({ code: 'INVALID_INPUT', error: 'New password confirmation does not match' });
+  if (typeof newPassword !== 'string' || newPassword.length === 0) {
+    return res.status(400).json({
+      code: 'NEW_PASSWORD_REQUIRED',
+      error: 'Mật khẩu mới không được bỏ trống.'
+    });
+  }
+  if (typeof confirmNewPassword !== 'string' || confirmNewPassword.length === 0) {
+    return res.status(400).json({
+      code: 'CONFIRM_PASSWORD_REQUIRED',
+      error: 'Vui lòng xác nhận mật khẩu mới.'
+    });
+  }
+  if (newPassword.length < security.changePasswordMinLength || newPassword.length > security.changePasswordMaxLength) {
+    return res.status(400).json({
+      code: 'INVALID_NEW_PASSWORD_LENGTH',
+      error: 'Mật khẩu mới phải có từ 8 đến 20 ký tự.'
+    });
+  }
+  if (!/\p{L}/u.test(newPassword) || !/\p{Nd}/u.test(newPassword)) {
+    return res.status(400).json({
+      code: 'NEW_PASSWORD_REQUIRES_LETTER_AND_NUMBER',
+      error: 'Mật khẩu mới phải bao gồm cả chữ và số.'
+    });
+  }
+  if (newPassword !== confirmNewPassword) {
+    return res.status(400).json({
+      code: 'PASSWORD_CONFIRMATION_MISMATCH',
+      error: 'Mật khẩu xác nhận không trùng khớp với mật khẩu mới.'
+    });
   }
   var user = await User.findById(req.user.id).select('+passwordHash');
   if (!(await bcrypt.compare(String(currentPassword), user.passwordHash))) {
-    return res.status(400).json({ code: 'WRONG_PASSWORD', error: 'Current password is incorrect' });
+    return res.status(400).json({
+      code: 'INCORRECT_CURRENT_PASSWORD',
+      error: 'Mật khẩu hiện tại không chính xác.'
+    });
   }
-  user.password = newPassword;
-  user.passwordHash = await bcrypt.hash(newPassword, 12);
-  await user.save();
-  res.json({ message: 'Password changed successfully' });
+  if (newPassword === currentPassword) {
+    return res.status(400).json({
+      code: 'NEW_PASSWORD_SAME_AS_CURRENT',
+      error: 'Mật khẩu mới phải khác mật khẩu hiện tại.'
+    });
+  }
+
+  try {
+    user.password = newPassword;
+    user.passwordHash = await bcrypt.hash(newPassword, 12);
+    await user.save();
+  } catch (error) {
+    console.error('Failed to update account password:', error);
+    return res.status(500).json({
+      code: 'CHANGE_PASSWORD_FAILED',
+      error: 'Đổi mật khẩu thất bại. Vui lòng thử lại sau.'
+    });
+  }
+  res.json({ message: 'Đổi mật khẩu thành công.' });
 };
 
 exports.setPin = async function(req, res) {

@@ -104,10 +104,19 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
 
   Future<void> _pickCompletionDate() async {
     final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+
+    // Ngày ban đầu hiển thị trên lịch: nếu ngày đã chọn trước đó từ ngày mai trở đi
+    // thì giữ nguyên, ngược lại mặc định là 30 ngày sau.
+    final initialDate = (_selectedCompletionDate != null &&
+            !_selectedCompletionDate!.isBefore(tomorrow))
+        ? _selectedCompletionDate!
+        : tomorrow.add(const Duration(days: 30));
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedCompletionDate ?? now.add(const Duration(days: 30)),
-      firstDate: DateTime(2020),
+      initialDate: initialDate,
+      firstDate: tomorrow, // Không cho phép chọn ngày hôm nay hoặc trước thời điểm hiện tại
       lastDate: DateTime(2100),
     );
     if (picked != null) {
@@ -195,6 +204,18 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
       if (_selectedCompletionDate == null) {
         completionDateError = 'Vui lòng chọn ngày hoàn thành mục tiêu'; // E7
         hasMissingRequiredInfo = true;
+      } else {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final compDay = DateTime(
+          _selectedCompletionDate!.year,
+          _selectedCompletionDate!.month,
+          _selectedCompletionDate!.day,
+        );
+        if (!compDay.isAfter(today)) {
+          completionDateError = 'Ngày hoàn thành mục tiêu phải sau ngày hiện tại';
+          hasMissingRequiredInfo = true;
+        }
       }
     }
 
@@ -264,6 +285,12 @@ class _CreateFundScreenState extends State<CreateFundScreen> {
       } else if (e.code == 'USER_NOT_FOUND' || e.code == 'CANNOT_INVITE_ADMIN') {
         setState(() {
           _partnerError = e.message;
+          _generalError = null;
+        });
+      } else if (e.code == 'COMPLETION_DATE_MUST_BE_FUTURE' ||
+          e.message.contains('sau ngày hiện tại')) {
+        setState(() {
+          _completionDateError = e.message;
           _generalError = null;
         });
       } else if (e.message.contains('Không thể tạo thêm quỹ') || e.code == 'MAX_FUNDS_EXCEEDED') {

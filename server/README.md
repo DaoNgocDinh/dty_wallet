@@ -33,7 +33,7 @@ The script is safe to re-run and reads `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSW
 - `POST /api/auth/register` — `{ name, password, pin? }`; password must be at least `MIN_PASSWORD_LENGTH` characters (default 6); `email` is optional and generated from `name` when omitted; optional PIN is 4–6 digits.
 - `POST /api/auth/login` — `{ name, password }`; logs in by **account name**, case-insensitive; returns a bearer token.
 - `POST /api/auth/logout` — requires a bearer token; acknowledges the logout. JWTs are stateless, so the client must discard its stored token.
-- `POST /api/auth/change-password` — `{ currentPassword, newPassword, confirmNewPassword }`; returns `WRONG_PASSWORD` when the current password does not match.
+- `POST /api/auth/change-password` — `{ currentPassword, newPassword, confirmNewPassword }`; the new password must be 8–20 characters, contain letters and numbers, differ from the current password, and match its confirmation. Validation errors have specific codes; an update failure returns `CHANGE_PASSWORD_FAILED`.
 - `PUT /api/auth/pin` — `{ password, pin }` to set/reset a transaction PIN.
 - `GET /api/transactions` — search by `transactionCode`, `type`, `status`, `fromDate`, `toDate`, `sender`, `recipient`; supports `page` and `limit`.
 - `GET /api/transactions/history` — authenticated user's transaction history; each item includes account, user ID, time, type, status and amount.

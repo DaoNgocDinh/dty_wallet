@@ -26,6 +26,19 @@ class ApiException implements Exception {
 const Map<String, String> _apiErrorMessages = {
   'INVALID_CREDENTIALS': 'Tài khoản hoặc mật khẩu không đúng',
   'WRONG_PASSWORD': 'Mật khẩu cũ không đúng',
+  'INCORRECT_CURRENT_PASSWORD': 'Mật khẩu hiện tại không chính xác.',
+  'CURRENT_PASSWORD_REQUIRED': 'Mật khẩu hiện tại không được bỏ trống.',
+  'NEW_PASSWORD_REQUIRED': 'Mật khẩu mới không được bỏ trống.',
+  'CONFIRM_PASSWORD_REQUIRED': 'Vui lòng xác nhận mật khẩu mới.',
+  'INVALID_NEW_PASSWORD_LENGTH': 'Mật khẩu mới phải có từ 8 đến 20 ký tự.',
+  'NEW_PASSWORD_REQUIRES_LETTER_AND_NUMBER':
+      'Mật khẩu mới phải bao gồm cả chữ và số.',
+  'NEW_PASSWORD_SAME_AS_CURRENT':
+      'Mật khẩu mới phải khác mật khẩu hiện tại.',
+  'PASSWORD_CONFIRMATION_MISMATCH':
+      'Mật khẩu xác nhận không trùng khớp với mật khẩu mới.',
+  'CHANGE_PASSWORD_FAILED':
+      'Đổi mật khẩu thất bại. Vui lòng thử lại sau.',
   'INVALID_INPUT': 'Thông tin không hợp lệ',
   'USERNAME_EXISTS': 'Tài khoản đã tồn tại',
   'EMAIL_EXISTS': 'Email đã được sử dụng',

@@ -249,118 +249,11 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheetCtx) => Container(
-        height: MediaQuery.of(sheetCtx).size.height * 0.7,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Lịch sử giao dịch',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => Navigator.of(sheetCtx).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: FutureBuilder<Map<String, dynamic>>(
-                future: AppScope.of(context).fetchTransactions(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.lightBlue,
-                      ),
-                    );
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Lỗi tải: ${snapshot.error}'));
-                  }
-                  final list = (snapshot.data?['data'] as List?) ?? [];
-                  if (list.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'Chưa có giao dịch nào được ghi nhận',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    );
-                  }
-                  return ListView.separated(
-                    itemCount: list.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final item = list[index] as Map<String, dynamic>;
-                      final type = item['type'] ?? 'Giao dịch';
-                      final amount = item['amount'] ?? 0;
-                      final code = item['transactionCode'] ?? '';
-                      final status = item['status'] ?? 'pending';
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.lightBlue.withValues(
-                            alpha: 0.15,
-                          ),
-                          child: const Icon(
-                            Icons.receipt_rounded,
-                            color: AppColors.lightBlue,
-                            size: 20,
-                          ),
-                        ),
-                        title: Text(
-                          '$type',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '$code',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${amount.toString()} đ',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            Text(
-                              '$status',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: status == 'completed'
-                                    ? Colors.green
-                                    : Colors.orange,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+      builder: (sheetCtx) => const _TransactionHistorySheet(),
     );
   }
 
@@ -1395,6 +1288,866 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontWeight: FontWeight.w600,
                       color: iconColor,
                     ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Giao diện Lịch sử giao dịch: Phân biệt rõ ràng Tiền vào & Tiền ra, khác icon, màu sắc và hỗ trợ bộ lọc tab
+class _TransactionHistorySheet extends StatefulWidget {
+  const _TransactionHistorySheet();
+
+  @override
+  State<_TransactionHistorySheet> createState() =>
+      _TransactionHistorySheetState();
+}
+
+class _TransactionHistorySheetState extends State<_TransactionHistorySheet> {
+  String _filter = 'all'; // 'all', 'in', 'out'
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  bool _matchesSearch(Map<String, dynamic> item, String query) {
+    if (query.isEmpty) return true;
+    final q = query.trim().toLowerCase();
+    final title = _getTxnTitle(item).toLowerCase();
+    final code = (item['transactionCode'] ?? item['code'] ?? item['_id'] ?? item['id'] ?? '')
+        .toString()
+        .toLowerCase();
+    final note = (item['note'] ?? '').toString().toLowerCase();
+    final sender = (item['sender'] ?? '').toString().toLowerCase();
+    final recipient = (item['recipient'] ?? '').toString().toLowerCase();
+    final amtNum = (item['amount'] as num?)?.toDouble() ?? 0;
+    final amtStr = amtNum.toString();
+    final amtIntStr = amtNum.toInt().toString();
+    final formattedAmt = formatVnd(amtNum).toLowerCase();
+    final dateStr = _formatTxnDate(item['createdAt']).toLowerCase();
+
+    return title.contains(q) ||
+        code.contains(q) ||
+        note.contains(q) ||
+        sender.contains(q) ||
+        recipient.contains(q) ||
+        amtStr.contains(q) ||
+        amtIntStr.contains(q) ||
+        formattedAmt.contains(q) ||
+        dateStr.contains(q);
+  }
+
+  bool _isIncoming(Map<String, dynamic> item, String? userEmail) {
+    final t = item['type']?.toString() ?? '';
+    if (t == 'wallet_deposit' ||
+        t == 'fund_withdrawal' ||
+        t == 'incoming' ||
+        t == 'deposit') {
+      return true;
+    }
+    if (t == 'fund_contribution' ||
+        t == 'jar_contribution' ||
+        t == 'mobile_topup' ||
+        t == 'data_topup' ||
+        t == 'bill_payment' ||
+        t == 'outgoing') {
+      return false;
+    }
+    if (userEmail != null && userEmail.isNotEmpty) {
+      if (item['recipient']?.toString().toLowerCase() ==
+          userEmail.toLowerCase()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  String _getTxnTitle(Map<String, dynamic> item) {
+    final t = item['type']?.toString() ?? '';
+    final meta = item['metadata'] is Map ? item['metadata'] as Map : null;
+    final fundName =
+        meta?['fundName']?.toString() ?? item['recipient']?.toString() ?? '';
+    switch (t) {
+      case 'wallet_deposit':
+        final source = item['sender']?.toString();
+        if (source != null && source.isNotEmpty && !source.contains('@')) {
+          return 'Nạp ví ($source)';
+        }
+        return 'Nạp tiền vào ví';
+      case 'fund_withdrawal':
+        if (fundName.isNotEmpty && !fundName.contains('@')) {
+          return 'Rút tiền: $fundName';
+        }
+        return 'Rút tiền từ quỹ';
+      case 'fund_contribution':
+        if (fundName.isNotEmpty && !fundName.contains('@')) {
+          return 'Góp quỹ: $fundName';
+        }
+        return 'Góp tiền vào quỹ';
+      case 'jar_contribution':
+        final jarName = item['recipient']?.toString() ?? '';
+        if (jarName.isNotEmpty && !jarName.contains('@')) {
+          return 'Vào hũ: $jarName';
+        }
+        return 'Chuyển vào hũ chi tiêu';
+      case 'mobile_topup':
+        final phone = item['recipient']?.toString() ?? '';
+        if (phone.isNotEmpty) {
+          return 'Nạp ĐT $phone';
+        }
+        return 'Nạp tiền điện thoại';
+      case 'data_topup':
+        final phone = item['recipient']?.toString() ?? '';
+        if (phone.isNotEmpty) {
+          return 'Nạp Data $phone';
+        }
+        return 'Nạp Data 3G/4G';
+      case 'bill_payment':
+        final billType = meta?['billType']?.toString() ?? '';
+        if (billType.isNotEmpty) {
+          return 'Thanh toán $billType';
+        }
+        return 'Thanh toán hoá đơn';
+      default:
+        return t.replaceAll('_', ' ');
+    }
+  }
+
+  String _formatTxnDate(dynamic dateVal) {
+    if (dateVal == null) return '';
+    try {
+      final dt = DateTime.parse(dateVal.toString()).toLocal();
+      final d = dt.day.toString().padLeft(2, '0');
+      final m = dt.month.toString().padLeft(2, '0');
+      final y = dt.year.toString();
+      final h = dt.hour.toString().padLeft(2, '0');
+      final min = dt.minute.toString().padLeft(2, '0');
+      return '$d/$m/$y $h:$min';
+    } catch (_) {
+      return dateVal.toString();
+    }
+  }
+
+  String _formatTxnStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return 'Thành công';
+      case 'pending':
+        return 'Đang xử lý';
+      case 'failed':
+        return 'Thất bại';
+      default:
+        return status;
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return const Color(0xFF2E7D32);
+      case 'pending':
+        return const Color(0xFFEF6C00);
+      case 'failed':
+        return const Color(0xFFC62828);
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final userEmail = AppScope.of(context).user?.email;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.78,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(
+                    Icons.receipt_long_rounded,
+                    color: AppColors.lightBlue,
+                    size: 24,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Lịch sử giao dịch',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                tooltip: 'Đóng',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Ô tìm kiếm giao dịch
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F7FA),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => _searchQuery = val.trim()),
+              style: const TextStyle(fontSize: 13.5, color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Tìm theo tên, mã giao dịch, số tiền, ghi chú...',
+                hintStyle: const TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textSecondary,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: AppColors.lightBlue,
+                ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(
+                          Icons.cancel_rounded,
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
+                        tooltip: 'Xoá tìm kiếm',
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 11,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          Expanded(
+            child: FutureBuilder<Map<String, dynamic>>(
+              future: AppScope.of(context).fetchTransactions(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.lightBlue),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Lỗi tải: ${snapshot.error}',
+                      style: const TextStyle(color: AppColors.error),
+                    ),
+                  );
+                }
+
+                final rawList = (snapshot.data?['data'] as List?) ?? [];
+                final list = rawList
+                    .map((e) => Map<String, dynamic>.from(e as Map))
+                    .toList();
+
+                if (list.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.receipt_outlined,
+                            size: 48,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'Chưa có giao dịch nào được ghi nhận',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                // Tính toán tổng tiền vào và tổng tiền ra
+                double totalIn = 0;
+                double totalOut = 0;
+                int countIn = 0;
+                int countOut = 0;
+
+                for (final item in list) {
+                  final amt = (item['amount'] as num?)?.toDouble() ?? 0;
+                  final isPending =
+                      item['status']?.toString().toLowerCase() == 'pending';
+                  if (_isIncoming(item, userEmail)) {
+                    if (!isPending) totalIn += amt;
+                    countIn++;
+                  } else {
+                    if (!isPending) totalOut += amt;
+                    countOut++;
+                  }
+                }
+
+                // Lọc theo bộ lọc và tìm kiếm
+                final filteredList = list.where((item) {
+                  final isInc = _isIncoming(item, userEmail);
+                  if (_filter == 'in' && !isInc) return false;
+                  if (_filter == 'out' && isInc) return false;
+                  if (!_matchesSearch(item, _searchQuery)) return false;
+                  return true;
+                }).toList();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Thanh tổng quan Tiền vào / Tiền ra
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          // Tổng tiền vào
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFE8F5E9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.south_west_rounded,
+                                    color: Color(0xFF2E7D32),
+                                    size: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Tổng vào',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      Text(
+                                        '+${formatVnd(totalIn)}',
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF2E7D32),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            height: 28,
+                            width: 1,
+                            color: AppColors.border,
+                          ),
+                          const SizedBox(width: 12),
+                          // Tổng tiền ra
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFFEBEE),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.north_east_rounded,
+                                    color: Color(0xFFE53935),
+                                    size: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Tổng ra',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      Text(
+                                        '-${formatVnd(totalOut)}',
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFE53935),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Bộ lọc 3 tab: Tất cả / Tiền vào / Tiền ra
+                    Row(
+                      children: [
+                        _buildFilterTab(
+                          label: 'Tất cả (${list.length})',
+                          isSelected: _filter == 'all',
+                          onTap: () => setState(() => _filter = 'all'),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildFilterTab(
+                          label: 'Tiền vào ($countIn)',
+                          icon: Icons.south_west_rounded,
+                          iconColor: const Color(0xFF2E7D32),
+                          isSelected: _filter == 'in',
+                          activeColor: const Color(0xFF2E7D32),
+                          activeBg: const Color(0xFFE8F5E9),
+                          onTap: () => setState(() => _filter = 'in'),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildFilterTab(
+                          label: 'Tiền ra ($countOut)',
+                          icon: Icons.north_east_rounded,
+                          iconColor: const Color(0xFFE53935),
+                          isSelected: _filter == 'out',
+                          activeColor: const Color(0xFFE53935),
+                          activeBg: const Color(0xFFFFEBEE),
+                          onTap: () => setState(() => _filter = 'out'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Danh sách giao dịch
+                    Expanded(
+                      child: filteredList.isEmpty
+                          ? Center(
+                              child: SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                  horizontal: 16,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        _searchQuery.isNotEmpty
+                                            ? Icons.search_off_rounded
+                                            : Icons.receipt_long_outlined,
+                                        size: 32,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _searchQuery.isNotEmpty
+                                          ? 'Không tìm thấy giao dịch nào phù hợp'
+                                          : (_filter == 'in'
+                                              ? 'Chưa có giao dịch tiền vào nào'
+                                              : 'Chưa có giao dịch tiền ra nào'),
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    if (_searchQuery.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Không có kết quả cho "${_searchQuery}"',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextButton.icon(
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() => _searchQuery = '');
+                                        },
+                                        icon: const Icon(
+                                          Icons.refresh_rounded,
+                                          size: 16,
+                                        ),
+                                        label: const Text('Xoá tìm kiếm'),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: AppColors.lightBlue,
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: filteredList.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, index) {
+                                final item = filteredList[index];
+                                final isInc = _isIncoming(item, userEmail);
+                                final amount =
+                                    (item['amount'] as num?)?.toDouble() ?? 0;
+                                final title = _getTxnTitle(item);
+                                final code =
+                                    item['transactionCode']?.toString() ?? '';
+                                final shortCode = code.length > 12
+                                    ? '${code.substring(0, 10)}...'
+                                    : code;
+                                final dateStr =
+                                    _formatTxnDate(item['createdAt']);
+                                final status =
+                                    item['status']?.toString() ?? 'completed';
+                                final note = item['note']?.toString() ?? '';
+
+                                return Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: AppColors.border),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.02,
+                                        ),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      // Icon phân biệt tiền vào / tiền ra
+                                      Container(
+                                        width: 42,
+                                        height: 42,
+                                        decoration: BoxDecoration(
+                                          color: isInc
+                                              ? const Color(0xFFE8F5E9)
+                                              : const Color(0xFFFFEBEE),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: isInc
+                                                ? const Color(
+                                                    0xFF2E7D32,
+                                                  ).withValues(alpha: 0.25)
+                                                : const Color(
+                                                    0xFFE53935,
+                                                  ).withValues(alpha: 0.25),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          isInc
+                                              ? Icons.south_west_rounded
+                                              : Icons.north_east_rounded,
+                                          color: isInc
+                                              ? const Color(0xFF2E7D32)
+                                              : const Color(0xFFE53935),
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+
+                                      // Thông tin giữa
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    title,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 13.5,
+                                                      color:
+                                                          AppColors.textPrimary,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                // Huy hiệu Tiền vào / Tiền ra
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                    horizontal: 5.5,
+                                                    vertical: 1.5,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: isInc
+                                                        ? const Color(
+                                                            0xFFE8F5E9,
+                                                          )
+                                                        : const Color(
+                                                            0xFFFFEBEE,
+                                                          ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          4,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    isInc
+                                                        ? 'Tiền vào'
+                                                        : 'Tiền ra',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: isInc
+                                                          ? const Color(
+                                                              0xFF2E7D32,
+                                                            )
+                                                          : const Color(
+                                                              0xFFC62828,
+                                                            ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Row(
+                                              children: [
+                                                if (dateStr.isNotEmpty)
+                                                  Text(
+                                                    dateStr,
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                    ),
+                                                  ),
+                                                if (shortCode.isNotEmpty) ...[
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '• $shortCode',
+                                                    style: TextStyle(
+                                                      fontSize: 10.5,
+                                                      color:
+                                                          Colors.grey.shade500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            if (note.isNotEmpty) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                note,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey.shade600,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+
+                                      // Số tiền và trạng thái bên phải
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            '${isInc ? '+' : '-'}${formatVnd(amount)}',
+                                            style: TextStyle(
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: isInc
+                                                  ? const Color(0xFF2E7D32)
+                                                  : const Color(0xFFE53935),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            _formatTxnStatus(status),
+                                            style: TextStyle(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: _statusColor(status),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterTab({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    IconData? icon,
+    Color? iconColor,
+    Color? activeColor,
+    Color? activeBg,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 6.5, horizontal: 4),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (activeBg ?? AppColors.lightBlue.withValues(alpha: 0.12))
+                : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected
+                  ? (activeColor ?? AppColors.lightBlue)
+                  : Colors.grey.shade200,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 13,
+                  color: isSelected
+                      ? (activeColor ?? AppColors.lightBlue)
+                      : Colors.grey.shade600,
+                ),
+                const SizedBox(width: 3),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected
+                        ? (activeColor ?? AppColors.lightBlueDark)
+                        : Colors.grey.shade700,
                   ),
                 ),
               ),
