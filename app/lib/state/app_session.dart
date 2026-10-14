@@ -59,6 +59,7 @@ class AppSession extends ChangeNotifier {
           id: _user!.id,
           name: _user!.name,
           email: _user!.email,
+          phoneNumber: _user!.phoneNumber,
           walletBalance: newBalance,
           role: newRole,
           createdAt: _user!.createdAt,
@@ -116,6 +117,7 @@ class AppSession extends ChangeNotifier {
         id: _user!.id,
         name: _user!.name,
         email: _user!.email,
+        phoneNumber: _user!.phoneNumber,
         walletBalance: _user!.walletBalance,
         role: _user!.role,
         createdAt: _user!.createdAt,
@@ -192,6 +194,7 @@ class AppSession extends ChangeNotifier {
         id: _user!.id,
         name: _user!.name,
         email: _user!.email,
+        phoneNumber: _user!.phoneNumber,
         walletBalance: newBalance,
         role: _user!.role,
         createdAt: _user!.createdAt,
@@ -250,6 +253,7 @@ class AppSession extends ChangeNotifier {
         id: _user!.id,
         name: _user!.name,
         email: _user!.email,
+        phoneNumber: _user!.phoneNumber,
         walletBalance: newBalance,
         role: _user!.role,
         createdAt: _user!.createdAt,
@@ -283,17 +287,22 @@ class AppSession extends ChangeNotifier {
     );
   }
 
-  /// Nạp điện thoại / Data.
+  /// Lấy danh sách gói Data từ nhà mạng (Subflow 8.2.1).
+  Future<List<Map<String, dynamic>>> fetchDataPackages({String? carrier}) {
+    return _authService.getDataPackages(token: _token, carrier: carrier);
+  }
+
+  /// Nạp điện thoại / Data (Use Case 08).
   Future<Map<String, dynamic>> mobileTopup({
     required String carrier,
     required String phoneNumber,
     required double amount,
     required String pin,
     String? dataPackage,
-  }) {
+  }) async {
     final token = _token;
     if (token == null) throw ApiException('Chưa đăng nhập');
-    return _authService.mobileTopup(
+    final res = await _authService.mobileTopup(
       token: token,
       carrier: carrier,
       phoneNumber: phoneNumber,
@@ -301,6 +310,21 @@ class AppSession extends ChangeNotifier {
       pin: pin,
       dataPackage: dataPackage,
     );
+    if (res['walletBalance'] != null && _user != null) {
+      final newBalance = (res['walletBalance'] as num).toDouble();
+      _user = AuthUser(
+        id: _user!.id,
+        name: _user!.name,
+        email: _user!.email,
+        phoneNumber: _user!.phoneNumber,
+        walletBalance: newBalance,
+        role: _user!.role,
+        createdAt: _user!.createdAt,
+        hasPin: _user!.hasPin,
+      );
+      notifyListeners();
+    }
+    return res;
   }
 
   /// Thanh toán hoá đơn.

@@ -9,6 +9,7 @@ class AuthUser {
     required this.id,
     required this.name,
     required this.email,
+    this.phoneNumber,
     this.walletBalance = 0,
     this.role = 'user',
     this.createdAt,
@@ -19,6 +20,7 @@ class AuthUser {
     id: json['id']?.toString() ?? '',
     name: json['name'] as String? ?? '',
     email: json['email'] as String? ?? '',
+    phoneNumber: json['phoneNumber'] as String?,
     walletBalance: (json['walletBalance'] as num?)?.toDouble() ?? 0,
     role: json['role'] as String? ?? 'user',
     createdAt: json['createdAt'] as String?,
@@ -28,6 +30,7 @@ class AuthUser {
   final String id;
   final String name;
   final String email;
+  final String? phoneNumber;
   final double walletBalance;
   final String role;
   final String? createdAt;
@@ -231,7 +234,23 @@ class AuthService {
         },
       );
 
-  /// Nạp điện thoại hoặc gói data.
+  /// Lấy danh sách gói Data từ nhà mạng (Subflow 8.2.1).
+  Future<List<Map<String, dynamic>>> getDataPackages({
+    String? token,
+    String? carrier,
+  }) async {
+    final query = carrier != null && carrier.isNotEmpty
+        ? '?carrier=${Uri.encodeComponent(carrier)}'
+        : '';
+    final res = await _client.get('/wallet/data-packages$query', token: token);
+    final rawList = res['packages'];
+    if (rawList is List) {
+      return rawList.whereType<Map<String, dynamic>>().toList();
+    }
+    return const [];
+  }
+
+  /// Nạp điện thoại hoặc gói data (Use Case 08).
   Future<Map<String, dynamic>> mobileTopup({
     required String token,
     required String carrier,
@@ -247,8 +266,9 @@ class AuthService {
           'carrier': carrier,
           'phoneNumber': phoneNumber,
           'amount': amount,
+          'denomination': amount,
           'pin': pin,
-          'dataPackage': ?dataPackage,
+          if (dataPackage != null) 'dataPackage': dataPackage,
         },
       );
 

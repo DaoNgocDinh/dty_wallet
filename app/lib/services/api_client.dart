@@ -30,6 +30,13 @@ const Map<String, String> _apiErrorMessages = {
   'USERNAME_EXISTS': 'Tài khoản đã tồn tại',
   'EMAIL_EXISTS': 'Email đã được sử dụng',
   'NAME_TOO_LONG': 'Tên tài khoản quá dài',
+  'INVALID_PHONE': 'Số điện thoại không hợp lệ. Vui lòng kiểm tra lại.',
+  'INSUFFICIENT_BALANCE': 'Số dư không đủ để thực hiện giao dịch.',
+  'WRONG_PIN': 'PIN không chính xác.',
+  'PIN_LOCKED': 'Nhập sai mã PIN quá 3 lần. Giao dịch đã bị hủy và khóa xác thực giao dịch tạm thời.',
+  'PACKAGE_NOT_AVAILABLE': 'Gói Data không còn khả dụng. Vui lòng chọn gói khác.',
+  'CARRIER_TIMEOUT': 'Không thể xử lý giao dịch. Vui lòng thử lại sau.',
+  'CARRIER_FAILED': 'Giao dịch không thành công. Vui lòng thử lại.',
 };
 
 class ApiClient {

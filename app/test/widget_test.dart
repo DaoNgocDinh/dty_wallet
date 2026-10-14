@@ -13,6 +13,7 @@ import 'package:app/screens/notifications_sheet.dart';
 import 'package:app/screens/select_partner_screen.dart';
 import 'package:app/screens/withdraw_fund_screen.dart';
 import 'package:app/screens/home_screen.dart';
+import 'package:app/screens/mobile_topup_screen.dart';
 import 'package:app/screens/login_screen.dart';
 import 'package:app/screens/profile_screen.dart';
 import 'package:app/screens/register_screen.dart';
@@ -406,6 +407,80 @@ class FakeAuthService implements AuthService {
     required String paymentMethod,
   }) async => {'message': 'Deposit success'};
 
+  String? mockTopupError;
+  int mockPinFailCount = 0;
+
+  @override
+  Future<List<Map<String, dynamic>>> getDataPackages({
+    String? token,
+    String? carrier,
+  }) async {
+    final list = [
+      {
+        'id': 'ST15K',
+        'name': 'ST15K',
+        'carrier': 'Viettel',
+        'data': '3GB',
+        'duration': '3 ngày',
+        'price': 15000,
+        'available': true,
+      },
+      {
+        'id': 'ST30K',
+        'name': 'ST30K',
+        'carrier': 'Viettel',
+        'data': '7GB',
+        'duration': '7 ngày',
+        'price': 30000,
+        'available': true,
+      },
+      {
+        'id': 'BIG90',
+        'name': 'BIG90',
+        'carrier': 'Vinaphone',
+        'data': '1GB/ngày',
+        'duration': '30 ngày',
+        'price': 90000,
+        'available': true,
+      },
+      {
+        'id': 'D15',
+        'name': 'D15',
+        'carrier': 'Mobifone',
+        'data': '3GB',
+        'duration': '3 ngày',
+        'price': 15000,
+        'available': true,
+      },
+      {
+        'id': '7D',
+        'name': '7D',
+        'carrier': 'Vietnamobile',
+        'data': '7GB',
+        'duration': '7 ngày',
+        'price': 20000,
+        'available': true,
+      },
+      {
+        'id': 'EXPIRED_TEST',
+        'name': 'EXPIRED_TEST',
+        'carrier': 'Viettel',
+        'data': '10GB',
+        'duration': '30 ngày',
+        'price': 50000,
+        'available': false,
+      },
+    ];
+    if (carrier == null || carrier.isEmpty) return list;
+    return list
+        .where(
+          (p) =>
+              (p['carrier'] as String).toLowerCase() ==
+              carrier.toLowerCase(),
+        )
+        .toList();
+  }
+
   @override
   Future<Map<String, dynamic>> mobileTopup({
     required String token,
@@ -414,7 +489,34 @@ class FakeAuthService implements AuthService {
     required double amount,
     required String pin,
     String? dataPackage,
-  }) async => {'message': 'Topup success'};
+  }) async {
+    if (mockTopupError != null) {
+      throw ApiException(mockTopupError!);
+    }
+    if (pin != '123456') {
+      mockPinFailCount++;
+      if (mockPinFailCount >= 3) {
+        throw ApiException(
+          'Nhập sai mã PIN quá 3 lần. Giao dịch đã bị hủy và khóa xác thực giao dịch tạm thời.',
+          code: 'PIN_LOCKED',
+        );
+      }
+      throw ApiException('PIN không chính xác.', code: 'WRONG_PIN');
+    }
+    mockPinFailCount = 0;
+    if (amount > mockWalletBalance) {
+      throw ApiException(
+        'Số dư không đủ để thực hiện giao dịch.',
+        code: 'INSUFFICIENT_BALANCE',
+      );
+    }
+    mockWalletBalance -= amount;
+    return {
+      'success': true,
+      'message': 'Giao dịch thành công',
+      'walletBalance': mockWalletBalance,
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> payBill({
@@ -3558,6 +3660,347 @@ void main() {
         expect(withdrawBtn.onPressed, isNull);
       },
     );
+    group('Chức năng Nạp tiền điện thoại/data (Use Case 08 - Cao Thái Tuấn)', () {
+      testWidgets('Bước 2, 3, 5, 8.1.1: Mở màn hình Nạp tiền điện thoại/data hiển thị đầy đủ giao diện', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: HomeScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Bấm nút Nạp đt/data trên HomeScreen
+        final topupBtn = find.text('Nạp đt/data');
+        await tester.ensureVisible(topupBtn);
+        await tester.tap(topupBtn);
+        await tester.pumpAndSettle();
+
+        // Kiểm tra tiêu đề và các trường thông tin
+        expect(find.text('Nạp tiền điện thoại/data'), findsOneWidget);
+        expect(find.text('Số dư ví khả dụng'), findsOneWidget);
+        expect(find.text('Nạp tiền điện thoại'), findsOneWidget);
+        expect(find.text('Nạp Data 4G/5G'), findsOneWidget);
+
+        // 4 nhà mạng
+        expect(find.text('Viettel'), findsOneWidget);
+        expect(find.text('Vinaphone'), findsOneWidget);
+        expect(find.text('Mobifone'), findsOneWidget);
+        expect(find.text('Vietnamobile'), findsOneWidget);
+
+        // Danh sách mệnh giá (8.1.1)
+        expect(find.text('10.000 đ'), findsOneWidget);
+        expect(find.text('20.000 đ'), findsOneWidget);
+        expect(find.text('50.000 đ'), findsWidgets);
+        expect(find.text('100.000 đ'), findsOneWidget);
+        expect(find.text('200.000 đ'), findsOneWidget);
+        expect(find.text('500.000 đ'), findsOneWidget);
+
+        // Tóm tắt và nút Tiếp tục
+        expect(find.text('Số tiền thanh toán:'), findsOneWidget);
+        expect(find.text('Tiếp tục'), findsOneWidget);
+      });
+
+      testWidgets('Ngoại lệ E1: Nhập số điện thoại không đủ 10 số hiển thị lỗi và chặn giao dịch', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: MobileTopupScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Nhập số điện thoại không hợp lệ (ít hơn 10 chữ số)
+        await tester.enterText(find.byType(TextField).first, '09876543');
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Số điện thoại không hợp lệ. Vui lòng kiểm tra lại.'), findsOneWidget);
+        // Không hiện popup xác nhận
+        expect(find.text('Xác nhận giao dịch'), findsNothing);
+      });
+
+      testWidgets('Luồng thay thế AF1: Bấm "Nạp cho số khác" và nhập số 10 số hợp lệ', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: MobileTopupScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Bấm nút "Nạp cho số khác"
+        await tester.tap(find.text('Nạp cho số khác'));
+        await tester.pumpAndSettle();
+
+        // Nhập SĐT hợp lệ
+        await tester.enterText(find.byType(TextField).first, '0912345678');
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        // Lỗi E1 biến mất và mở bảng xác nhận
+        expect(find.text('Số điện thoại không hợp lệ. Vui lòng kiểm tra lại.'), findsNothing);
+        expect(find.text('Xác nhận giao dịch'), findsOneWidget);
+        expect(find.text('0912345678'), findsWidgets);
+      });
+
+      testWidgets('Luồng thay thế AF2: Người dùng chọn Hủy giao dịch', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: MobileTopupScreen(initialPhoneNumber: '0987654321')),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+        expect(find.text('Xác nhận giao dịch'), findsOneWidget);
+
+        // AF2.1: Bấm nút Hủy
+        final cancelBtn = find.widgetWithText(OutlinedButton, 'Hủy');
+        await tester.ensureVisible(cancelBtn);
+        await tester.tap(cancelBtn);
+        await tester.pumpAndSettle();
+
+        // AF2.2: Hiển thị yêu cầu xác nhận hủy
+        expect(find.text('Bạn có chắc chắn muốn hủy giao dịch này không?'), findsOneWidget);
+
+        // AF2.3 & AF2.4: Người dùng bấm "Xác nhận hủy"
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Xác nhận hủy'));
+        await tester.pumpAndSettle();
+
+        // Đã hủy và quay lại màn hình nạp tiền
+        expect(find.text('Xác nhận giao dịch'), findsNothing);
+        expect(find.text('Nạp tiền điện thoại/data'), findsOneWidget);
+      });
+
+      testWidgets('Luồng con 8.2: Nạp gói Data, lấy danh sách gói từ API và chọn gói', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: MobileTopupScreen(initialPhoneNumber: '0987654321')),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Chuyển sang tab Nạp Data
+        await tester.tap(find.text('Nạp Data 4G/5G'));
+        await tester.pumpAndSettle();
+
+        // Danh sách gói cước được hiển thị từ API
+        expect(find.text('ST15K'), findsOneWidget);
+        expect(find.text('ST30K'), findsOneWidget);
+
+        // Chọn gói ST30K (30.000đ)
+        final pkgBtn = find.text('ST30K');
+        await tester.ensureVisible(pkgBtn);
+        await tester.tap(pkgBtn);
+        await tester.pumpAndSettle();
+
+        expect(find.text('30.000 đ'), findsWidgets);
+      });
+
+      testWidgets('Ngoại lệ E6: Chọn gói Data không còn khả dụng hiển thị thông báo lỗi', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: MobileTopupScreen(initialPhoneNumber: '0987654321', initialIsData: true)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Chọn gói cước đã ngừng cung cấp
+        final expiredPkg = find.text('EXPIRED_TEST');
+        await tester.ensureVisible(expiredPkg);
+        await tester.tap(expiredPkg);
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Gói Data không còn khả dụng. Vui lòng chọn gói khác.'), findsOneWidget);
+        expect(find.text('Xác nhận giao dịch'), findsNothing);
+      });
+
+      testWidgets('Ngoại lệ E2: Số dư ví không đủ để thực hiện giao dịch', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockWalletBalance = 20000; // Chỉ có 20.000đ
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(
+              home: MobileTopupScreen(initialPhoneNumber: '0987654321', initialAmount: 100000),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Xác nhận thanh toán');
+        await tester.pumpAndSettle();
+
+        // Hiển thị dialog E2: Số dư không đủ
+        expect(find.text('Số dư không đủ'), findsOneWidget);
+        expect(find.text('Số dư không đủ để thực hiện giao dịch.'), findsOneWidget);
+      });
+
+      testWidgets('Ngoại lệ E3: Nhập sai PIN 3 lần thì khóa xác thực tạm thời', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: MobileTopupScreen(initialPhoneNumber: '0987654321')),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+        await tapButton(tester, 'Xác nhận thanh toán');
+        await tester.pumpAndSettle();
+
+        // Nhập sai lần 1
+        await tester.enterText(find.byType(TextField).last, '000000');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+        expect(find.text('PIN không chính xác. (Còn 2 lần thử)'), findsOneWidget);
+
+        // Nhập sai lần 2
+        await tester.enterText(find.byType(TextField).last, '111111');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+        expect(find.text('PIN không chính xác. (Còn 1 lần thử)'), findsOneWidget);
+
+        // Nhập sai lần 3 -> Bị khóa
+        await tester.enterText(find.byType(TextField).last, '222222');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Khóa xác thực tạm thời'), findsOneWidget);
+        expect(find.text('Nhập sai mã PIN quá 3 lần. Giao dịch đã bị hủy và khóa xác thực giao dịch tạm thời.'), findsOneWidget);
+      });
+
+      testWidgets('Ngoại lệ E4: API nhà mạng lỗi kết nối/timeout hiển thị nút Thử lại', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockTopupError = 'Không thể xử lý giao dịch. Vui lòng thử lại sau.';
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: MobileTopupScreen(initialPhoneNumber: '0987654321')),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+        await tapButton(tester, 'Xác nhận thanh toán');
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).last, '123456');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Không thể xử lý giao dịch. Vui lòng thử lại sau.'), findsOneWidget);
+        expect(find.text('Thử lại'), findsOneWidget);
+      });
+
+      testWidgets('Ngoại lệ E5: Giao dịch nhà mạng thất bại', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockTopupError = 'Giao dịch không thành công. Vui lòng thử lại.';
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: MobileTopupScreen(initialPhoneNumber: '0987654321')),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+        await tapButton(tester, 'Xác nhận thanh toán');
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).last, '123456');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Giao dịch không thành công. Vui lòng thử lại.'), findsOneWidget);
+      });
+
+      testWidgets('Luồng thành công hoàn chỉnh: Nạp tiền điện thoại Viettel 50.000đ trừ số dư ví và hiển thị thông báo thành công', (tester) async {
+        final fakeService = FakeAuthService(acceptedPassword: '123456');
+        fakeService.mockWalletBalance = 500000;
+        final session = AppSession(authService: fakeService);
+        await session.login(account: 'admin', password: '123456');
+
+        await tester.pumpWidget(
+          AppScope(
+            session: session,
+            child: const MaterialApp(home: MobileTopupScreen(initialPhoneNumber: '0987654321', initialAmount: 50000)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Tiếp tục');
+        await tester.pumpAndSettle();
+
+        await tapButton(tester, 'Xác nhận thanh toán');
+        await tester.pumpAndSettle();
+
+        // Nhập PIN 123456 đúng
+        await tester.enterText(find.byType(TextField).last, '123456');
+        await tapButton(tester, 'Xác thực & Thanh toán');
+        await tester.pumpAndSettle();
+
+        // Bước 18: Hiển thị thông báo "Giao dịch thành công"
+        expect(find.text('Giao dịch thành công'), findsOneWidget);
+        expect(find.text('0987654321'), findsWidgets);
+        expect(find.text('Viettel'), findsWidgets);
+        expect(find.text('Hoàn tất'), findsOneWidget);
+
+        // Số dư ví bị trừ 50.000đ (500.000 - 50.000 = 450.000)
+        expect(session.user?.walletBalance, equals(450000));
+      });
+    });
   });
 }
 
