@@ -158,6 +158,49 @@ class _FundsScreenState extends State<FundsScreen> {
     );
   }
 
+  IconData _getFundIcon(String fundType) {
+    switch (fundType.trim()) {
+      case 'Cá nhân':
+        return Icons.person_rounded;
+      case 'Cặp đôi':
+        return Icons.favorite_rounded;
+      case 'Tích lũy':
+        return Icons.savings_rounded;
+      case 'Hội nhóm':
+        return Icons.groups_rounded;
+      default:
+        return Icons.account_balance_wallet_rounded;
+    }
+  }
+
+  Color _getFundColor(String fundType) {
+    switch (fundType.trim()) {
+      case 'Cá nhân':
+        return const Color(0xFF1976D2);
+      case 'Cặp đôi':
+        return const Color(0xFFE91E63);
+      case 'Tích lũy':
+        return const Color(0xFFE65100);
+      case 'Hội nhóm':
+        return const Color(0xFF7B1FA2);
+      default:
+        return const Color(0xFFE53935);
+    }
+  }
+
+  String _formatDate(dynamic dateVal) {
+    if (dateVal == null) return '';
+    try {
+      final dt = DateTime.parse(dateVal.toString());
+      final d = dt.day.toString().padLeft(2, '0');
+      final m = dt.month.toString().padLeft(2, '0');
+      final y = dt.year.toString();
+      return '$d/$m/$y';
+    } catch (_) {
+      return dateVal.toString();
+    }
+  }
+
   Widget _buildContent() {
     if (_isLoading) {
       return const Center(
@@ -231,8 +274,9 @@ class _FundsScreenState extends State<FundsScreen> {
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
+        padding: const EdgeInsets.only(bottom: 20),
         itemCount: _funds.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        separatorBuilder: (_, _) => const SizedBox(height: 14),
         itemBuilder: (context, index) {
           final item = _funds[index];
           final name = item['name']?.toString() ?? 'Quỹ';
@@ -242,122 +286,236 @@ class _FundsScreenState extends State<FundsScreen> {
           final targetAmount =
               (item['targetAmount'] as num?)?.toDouble() ?? 0.0;
           final hasTarget = targetAmount > 0;
-          final amountDisplay = hasTarget
-              ? '${formatVnd(currentAmount)} / ${formatVnd(targetAmount)}'
-              : formatVnd(currentAmount);
-          // Quỹ cặp đôi đã tạo nhưng chưa có người cùng lập quỹ đồng ý
+          final progress = hasTarget
+              ? (currentAmount / targetAmount).clamp(0.0, 1.0)
+              : 0.0;
+          final percent = (progress * 100).toInt();
+          final completionDate = item['completionDate'];
           final isPendingPartner =
               item['status']?.toString() == 'pending_partner';
 
-          return Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => _openFundDetail(item),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFE53935).withValues(alpha: 0.4),
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Row(
-                    children: [
-                      // Icon đại diện
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE53935).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.groups_rounded,
-                          color: Color(0xFFE53935),
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
+          final fundColor = _getFundColor(fundType);
+          final fundIcon = _getFundIcon(fundType);
 
-                      // Thông tin quỹ
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              name,
-                              style: const TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFE53935),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 3),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    fundType,
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      color: Colors.grey.shade700,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
+          return Card(
+            elevation: 1.5,
+            shadowColor: Colors.black.withValues(alpha: 0.08),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(
+                color: fundColor.withValues(alpha: 0.25),
+                width: 1.2,
+              ),
+            ),
+            color: Colors.white,
+            margin: EdgeInsets.zero,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () => _openFundDetail(item),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header của Card: Icon + Tên quỹ + Loại quỹ + Trạng thái
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: fundColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            fundIcon,
+                            color: fundColor,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
                                 ),
-                                if (isPendingPartner) ...[
-                                  const SizedBox(width: 6),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
+                                      horizontal: 7,
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFFF8E1),
+                                      color: fundColor.withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(6),
                                       border: Border.all(
-                                        color: const Color(0xFFFFE082),
+                                        color: fundColor.withValues(alpha: 0.2),
                                       ),
                                     ),
-                                    child: const Text(
-                                      'Chờ đồng ý',
+                                    child: Text(
+                                      fundType,
                                       style: TextStyle(
-                                        fontSize: 10.5,
-                                        color: Color(0xFFF57F17),
+                                        fontSize: 11.5,
+                                        color: fundColor,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
+                                  if (isPendingPartner) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFF8E1),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: const Color(0xFFFFE082),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Chờ đồng ý',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFFF57F17),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                                const SizedBox(width: 8),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Phần tài chính của Card
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.grey.shade200,
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Số dư hiện tại',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                formatVnd(currentAmount),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: fundColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (hasTarget) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
                                 Expanded(
                                   child: Text(
-                                    amountDisplay,
+                                    'Mục tiêu: ${formatVnd(targetAmount)}',
                                     style: const TextStyle(
                                       fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '$percent%',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: progress >= 1.0
+                                        ? const Color(0xFF2E7D32)
+                                        : fundColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                minHeight: 6,
+                                backgroundColor: Colors.grey.shade200,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  progress >= 1.0
+                                      ? const Color(0xFF2E7D32)
+                                      : fundColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (completionDate != null &&
+                              _formatDate(completionDate).isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.event_outlined,
+                                  size: 13,
+                                  color: AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    'Thời hạn: ${_formatDate(completionDate)}',
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      color: AppColors.textSecondary,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -365,17 +523,35 @@ class _FundsScreenState extends State<FundsScreen> {
                               ],
                             ),
                           ],
-                        ),
+                        ],
                       ),
+                    ),
 
-                      // Mũi tên điều hướng xem chi tiết quỹ
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        color: AppColors.textSecondary,
-                        size: 22,
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: 10),
+
+                    // Footer nhỏ của Card
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Xem chi tiết & quản lý quỹ',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.lightBlue,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: AppColors.lightBlue,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
