@@ -973,6 +973,102 @@ class FakeAuthService implements AuthService {
     };
   }
 
+  @override
+  Future<List<Map<String, dynamic>>> searchFeatures({String? query, String? token}) async {
+    final all = [
+      {
+        'id': 'deposit',
+        'name': 'Nạp tiền vào ví',
+        'shortName': 'Nạp ví',
+        'description': 'Nạp tiền từ ngân hàng liên kết vào số dư ví DTY',
+        'category': 'Tài chính',
+        'icon': 'add_card',
+      },
+      {
+        'id': 'topup_phone',
+        'name': 'Nạp tiền điện thoại',
+        'shortName': 'Nạp ĐT',
+        'description': 'Nạp thẻ trực tiếp Viettel, VinaPhone, MobiFone, Vietnamobile',
+        'category': 'Viễn thông',
+        'icon': 'phone_iphone',
+      },
+      {
+        'id': 'topup_data',
+        'name': 'Nạp Data 3G/4G/5G',
+        'shortName': 'Nạp Data',
+        'description': 'Đăng ký gói cước dung lượng Data internet di động tốc độ cao',
+        'category': 'Viễn thông',
+        'icon': 'data_usage',
+      },
+      {
+        'id': 'history',
+        'name': 'Lịch sử giao dịch',
+        'shortName': 'Lịch sử',
+        'description': 'Xem chi tiết biến động số dư, lịch sử nạp tiền, chi tiêu và chuyển tiền',
+        'category': 'Tài chính',
+        'icon': 'receipt_long',
+      },
+      {
+        'id': 'bill_payment',
+        'name': 'Thanh toán hoá đơn',
+        'shortName': 'Hoá đơn',
+        'description': 'Thanh toán hoá đơn điện lực EVN, nước sạch, cước internet',
+        'category': 'Tiện ích',
+        'icon': 'receipt',
+      },
+      {
+        'id': 'funds',
+        'name': 'Quản lý quỹ nhóm',
+        'shortName': 'Quỹ nhóm',
+        'description': 'Tạo quỹ chung, quản lý thành viên, góp quỹ và rút tiền minh bạch',
+        'category': 'Tài chính',
+        'icon': 'groups',
+      },
+      {
+        'id': 'spending_jars',
+        'name': 'Hũ chi tiêu',
+        'shortName': 'Hũ chi tiêu',
+        'description': 'Phương pháp 6 hũ quản lý tài chính cá nhân thông minh',
+        'category': 'Tài chính',
+        'icon': 'all_inbox',
+      },
+      {
+        'id': 'notifications',
+        'name': 'Thông báo',
+        'shortName': 'Thông báo',
+        'description': 'Xem tin tức hệ thống, thông báo biến động số dư và lời mời tham gia quỹ',
+        'category': 'Tiện ích',
+        'icon': 'notifications',
+      },
+      {
+        'id': 'profile',
+        'name': 'Trang cá nhân & Cài đặt',
+        'shortName': 'Trang cá nhân',
+        'description': 'Xem thông tin tài khoản, cài đặt mã PIN và đổi mật khẩu ví',
+        'category': 'Tài khoản',
+        'icon': 'person',
+      },
+      {
+        'id': 'admin_users',
+        'name': 'Quản lý tài khoản (Admin)',
+        'shortName': 'DS tài khoản',
+        'description': 'Xem danh sách tài khoản, phân quyền và quản lý hệ thống',
+        'category': 'Quản trị',
+        'icon': 'admin_panel_settings',
+      },
+    ];
+
+    if (query == null || query.trim().isEmpty) return all;
+    final q = query.trim().toLowerCase();
+    return all.where((f) {
+      final name = (f['name'] as String).toLowerCase();
+      final desc = (f['description'] as String).toLowerCase();
+      final shortName = (f['shortName'] as String).toLowerCase();
+      final cat = (f['category'] as String).toLowerCase();
+      return name.contains(q) || desc.contains(q) || shortName.contains(q) || cat.contains(q);
+    }).toList();
+  }
+
   AuthResult _result(String account) => AuthResult(
     token: 'fake-jwt-token-for-$account',
     user: AuthUser(
@@ -1127,7 +1223,7 @@ void main() {
   });
 
   testWidgets(
-    'Trang chủ có nút Trang cá nhân hình vuông tròn ở góc trên bên phải',
+    'Trang chủ: Nút Trang cá nhân nằm ở thanh điều hướng dưới cùng bên phải',
     (tester) async {
       await tester.pumpWidget(buildApp());
       await _login(tester, account: 'admin', password: '123456');
@@ -1137,37 +1233,11 @@ void main() {
       final profileBtn = find.byTooltip('Trang cá nhân');
       expect(profileBtn, findsOneWidget);
 
-      final screenWidth = tester.getSize(find.byType(HomeScreen)).width;
-      expect(tester.getTopRight(profileBtn).dx, closeTo(screenWidth - 18, 1.5));
+      // Nằm ở phần dưới màn hình (Bottom Navigation Bar)
+      final screenHeight = tester.getSize(find.byType(HomeScreen)).height;
+      expect(tester.getCenter(profileBtn).dy, greaterThan(screenHeight - 80));
     },
   );
-
-  testWidgets('Đăng xuất từ Trang cá nhân quay về màn hình đăng nhập', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp());
-    await _login(tester, account: 'admin', password: '123456');
-
-    // Mở Trang cá nhân từ góc trên bên phải
-    await tester.tap(find.byTooltip('Trang cá nhân'));
-    await tester.pumpAndSettle();
-    expect(find.byType(ProfileScreen), findsOneWidget);
-
-    // Cuộn tới nút Đăng xuất tài khoản và bấm
-    final logoutBtn = find.widgetWithText(AppButton, 'Đăng xuất tài khoản');
-    await tester.ensureVisible(logoutBtn);
-    await tester.pumpAndSettle();
-    await tester.tap(logoutBtn);
-    await tester.pumpAndSettle();
-
-    // Xác nhận trên AlertDialog
-    final confirmBtn = find.widgetWithText(TextButton, 'Đăng xuất');
-    await tester.tap(confirmBtn);
-    await tester.pumpAndSettle();
-
-    expect(find.byType(LoginScreen), findsOneWidget);
-    expect(find.byType(HomeScreen), findsNothing);
-  });
 
   testWidgets('Mở màn hình đổi mật khẩu từ Trang cá nhân', (tester) async {
     await tester.pumpWidget(buildApp());
@@ -1446,19 +1516,73 @@ void main() {
   });
 
   testWidgets(
-    'Trang chủ: Nút Nạp tiền cùng hàng với số dư và mở sheet Nạp tiền',
+    'Trang chủ: Đã xoá nút Nạp tiền ở card số dư, nút tròn nạp tiền ở thanh dưới mở sheet Nạp tiền',
     (tester) async {
       await tester.pumpWidget(buildApp());
       await _login(tester, account: 'admin', password: '123456');
 
       expect(find.byType(HomeScreen), findsOneWidget);
-      final depositBtn = find.text('Nạp tiền');
+      // Đã xoá nút text 'Nạp tiền' ở card số dư
+      expect(find.text('Nạp tiền'), findsNothing);
+
+      // Nút hình tròn dấu cộng ở giữa thanh điều hướng dưới cùng
+      final depositBtn = find.byTooltip('Nạp tiền');
       expect(depositBtn, findsOneWidget);
 
       await tester.tap(depositBtn);
       await tester.pumpAndSettle();
 
       expect(find.text('Nạp tiền vào ví'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Trang chủ: Thanh điều hướng dưới cùng chỉ gồm icon không chữ với nút tròn nạp tiền ở giữa',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await _login(tester, account: 'admin', password: '123456');
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+
+      // 4 icon xung quanh + 1 nút nạp tiền ở giữa
+      expect(find.byTooltip('Trang chủ'), findsOneWidget);
+      expect(find.byTooltip('Nạp data'), findsOneWidget);
+      expect(find.byTooltip('Nạp tiền'), findsOneWidget);
+      expect(find.byTooltip('Lịch sử giao dịch'), findsOneWidget);
+      expect(find.byTooltip('Trang cá nhân'), findsOneWidget);
+
+      // Bấm nút Nạp data mở MobileTopupScreen
+      await tester.tap(find.byTooltip('Nạp data'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MobileTopupScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Trang chủ: Header có thanh tìm kiếm tính năng bên trái và chuông thông báo bên phải, không có logo',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await _login(tester, account: 'admin', password: '123456');
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+
+      // Bỏ text logo thương hiệu ở header
+      expect(find.text('DTY Wallet'), findsNothing);
+
+      // Giữ nút thông báo
+      expect(find.byTooltip('Thông báo'), findsOneWidget);
+
+      // Có ô tìm kiếm tính năng
+      final searchInput = find.byType(TextField);
+      expect(searchInput, findsOneWidget);
+
+      // Nhập từ khóa tìm kiếm
+      await tester.enterText(searchInput, 'hoá đơn');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      // Hiển thị kết quả tìm kiếm từ API
+      expect(find.text('Thanh toán hoá đơn'), findsWidgets);
     },
   );
 

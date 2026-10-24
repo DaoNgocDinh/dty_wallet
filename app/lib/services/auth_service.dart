@@ -383,4 +383,15 @@ class AuthService {
         : '';
     return _client.get('/admin/users$queryParam', token: token);
   }
+
+  /// Tìm kiếm dịch vụ và tính năng trong ứng dụng từ server API.
+  Future<List<Map<String, dynamic>>> searchFeatures({String? query, String? token}) async {
+    final queryParam = (query != null && query.trim().isNotEmpty)
+        ? '?q=${Uri.encodeComponent(query.trim())}'
+        : '';
+    final res = await _client.get('/features/search$queryParam', token: token);
+    final list = res['features'] as List?;
+    if (list == null) return [];
+    return list.whereType<Map<String, dynamic>>().toList();
+  }
 }

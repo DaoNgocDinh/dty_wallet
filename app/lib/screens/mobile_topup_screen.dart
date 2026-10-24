@@ -5,7 +5,6 @@ import '../services/api_client.dart';
 import '../state/app_session.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
-import '../widgets/back_label.dart';
 import 'home_screen.dart' show formatVnd;
 
 /// Danh sách 4 nhà mạng theo chuẩn đặc tả Use Case 08
@@ -50,12 +49,16 @@ class MobileTopupScreen extends StatefulWidget {
     this.initialPhoneNumber,
     this.initialCarrier,
     this.initialAmount,
+    this.isEmbedded = false,
+    this.onBackToHome,
   });
 
   final bool initialIsData;
   final String? initialPhoneNumber;
   final String? initialCarrier;
   final double? initialAmount;
+  final bool isEmbedded;
+  final VoidCallback? onBackToHome;
 
   @override
   State<MobileTopupScreen> createState() => _MobileTopupScreenState();
@@ -819,7 +822,7 @@ class _MobileTopupScreenState extends State<MobileTopupScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           tooltip: 'Quay lại',
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () { if (widget.onBackToHome != null) { widget.onBackToHome!(); } else if (Navigator.of(context).canPop()) { Navigator.of(context).pop(); } },
         ),
         actions: [
           IconButton(

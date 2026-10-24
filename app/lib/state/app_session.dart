@@ -474,6 +474,11 @@ class AppSession extends ChangeNotifier {
     if (token == null) throw ApiException('Chưa đăng nhập');
     return _authService.adminUsers(token, search: search);
   }
+
+  /// Tìm kiếm dịch vụ và tính năng trong ứng dụng từ server API.
+  Future<List<Map<String, dynamic>>> searchFeatures(String query) {
+    return _authService.searchFeatures(query: query, token: _token);
+  }
 }
 
 /// Cung cấp [AppSession] cho toàn cây widget.

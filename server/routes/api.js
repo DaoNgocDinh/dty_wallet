@@ -19,6 +19,7 @@ router.use('/wallet', require('./walletRoutes'));
 router.use('/admin', require('./adminRoutes'));
 router.use('/spending-jars', require('./spendingJarRoutes'));
 router.use('/transactions', require('./transactionRoutes'));
+router.use('/features', require('./featureRoutes'));
 
 // Bí danh tương thích ngược cho endpoint /users -> adminRoutes (/admin/users)
 router.use('/users', require('./adminRoutes'));

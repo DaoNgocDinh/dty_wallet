@@ -13,7 +13,14 @@ import 'login_screen.dart';
 /// Màn hình Trang cá nhân: hiển thị thông tin tài khoản, số dư,
 /// cài đặt mã PIN giao dịch, đổi mật khẩu và đăng xuất qua API server.
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({
+    super.key,
+    this.isEmbedded = false,
+    this.onBackToHome,
+  });
+
+  final bool isEmbedded;
+  final VoidCallback? onBackToHome;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -274,7 +281,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     // Nút quay lại trang chủ
                     BackLabel(
-                      onTap: () => Navigator.of(context).pop(),
+                      onTap: () {
+                        if (widget.onBackToHome != null) {
+                          widget.onBackToHome!();
+                        } else if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        }
+                      },
                       text: 'Trang chủ',
                     ),
                     const SizedBox(height: 8),
