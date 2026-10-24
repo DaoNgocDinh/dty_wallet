@@ -34,6 +34,7 @@ class _MyAppState extends State<MyApp> {
       child: MaterialApp(
         title: 'dty_wallet',
         debugShowCheckedModeBanner: false,
+        scrollBehavior: const NoScrollbarBehavior(),
         theme: AppTheme.light,
         home: const LoginScreen(),
       ),

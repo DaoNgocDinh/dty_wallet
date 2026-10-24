@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 /// Độ dài tối thiểu của mật khẩu, phải khớp với server (MIN_PASSWORD_LENGTH).
@@ -53,6 +54,13 @@ class AppTheme {
         bodyColor: AppColors.textPrimary,
         displayColor: AppColors.textPrimary,
       ),
+      scrollbarTheme: const ScrollbarThemeData(
+        thumbVisibility: WidgetStatePropertyAll(false),
+        trackVisibility: WidgetStatePropertyAll(false),
+        thickness: WidgetStatePropertyAll(0),
+        radius: Radius.zero,
+        interactive: false,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
@@ -81,4 +89,27 @@ class AppTheme {
       ),
     );
   }
+}
+
+/// Behavior ẩn hoàn toàn thanh cuộn (scrollbar) trên toàn bộ ứng dụng và hỗ trợ vuốt cuộn mượt mà.
+class NoScrollbarBehavior extends MaterialScrollBehavior {
+  const NoScrollbarBehavior();
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
+  }
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.unknown,
+      };
 }
