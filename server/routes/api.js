@@ -26,7 +26,7 @@ router.use('/users', require('./adminRoutes'));
 
 // 404 Handler cho các API không tồn tại
 router.use(function(req, res) {
-  res.status(404).json({ error: 'API endpoint not found' });
+  res.status(404).json({ error: 'Đường dẫn API không tồn tại' });
 });
 
 module.exports = router;

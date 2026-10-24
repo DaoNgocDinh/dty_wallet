@@ -10,10 +10,12 @@ class TransactionHistoryScreen extends StatefulWidget {
     super.key,
     this.isEmbedded = false,
     this.onBackToHome,
+    this.isActive = true,
   });
 
   final bool isEmbedded;
   final VoidCallback? onBackToHome;
+  final bool isActive;
 
   @override
   State<TransactionHistoryScreen> createState() =>
@@ -31,7 +33,27 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadTransactions();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.isActive) {
+        _loadTransactions();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant TransactionHistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && (!oldWidget.isActive || widget.key != oldWidget.key)) {
+      _loadTransactions();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.isActive && _transactions.isEmpty && !_isLoading) {
+      _loadTransactions();
+    }
   }
 
   @override
@@ -106,7 +128,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   bool _isIncoming(Map<String, dynamic> item, String? userEmail) {
     final type = item['type']?.toString().toLowerCase() ?? '';
-    if (type == 'deposit' || type == 'fund_withdrawal') return true;
+    if (type == 'deposit' || type == 'wallet_deposit' || type == 'fund_withdrawal') return true;
     if (userEmail != null && userEmail.isNotEmpty) {
       final recipient = item['recipient']?.toString().toLowerCase() ?? '';
       if (recipient == userEmail.toLowerCase()) return true;
@@ -121,6 +143,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
     switch (type) {
       case 'deposit':
+      case 'wallet_deposit':
         return 'Nạp tiền vào ví';
       case 'mobile_topup':
         return recipient.isNotEmpty
@@ -137,16 +160,20 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       case 'fund_withdrawal':
         return note.isNotEmpty ? note : 'Rút tiền từ quỹ về ví';
       case 'spending_jar':
+      case 'jar_contribution':
+        return note.isNotEmpty ? note : 'Cấp tiền vào hũ chi tiêu';
+      case 'jar_spend':
         return note.isNotEmpty ? note : 'Chi tiêu từ hũ';
       default:
         if (note.isNotEmpty) return note;
-        return type.replaceAll('_', ' ');
+        return 'Giao dịch ví điện tử';
     }
   }
 
   IconData _getTypeIcon(String type) {
     switch (type) {
       case 'deposit':
+      case 'wallet_deposit':
         return Icons.add_card_rounded;
       case 'mobile_topup':
         return Icons.phone_iphone_rounded;
@@ -159,6 +186,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       case 'fund_withdrawal':
         return Icons.savings_rounded;
       case 'spending_jar':
+      case 'jar_contribution':
+      case 'jar_spend':
         return Icons.all_inbox_rounded;
       default:
         return Icons.swap_horiz_rounded;
@@ -168,6 +197,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   Color _getTypeColor(String type) {
     switch (type) {
       case 'deposit':
+      case 'wallet_deposit':
         return const Color(0xFF2E7D32);
       case 'mobile_topup':
         return const Color(0xFFEF6C00);
@@ -180,6 +210,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       case 'fund_withdrawal':
         return const Color(0xFF00897B);
       case 'spending_jar':
+      case 'jar_contribution':
+      case 'jar_spend':
         return const Color(0xFF7B1FA2);
       default:
         return AppColors.lightBlueDark;
@@ -187,7 +219,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 
   void _showTransactionDetails(Map<String, dynamic> item, bool isIncome) {
-    final code = item['transactionCode']?.toString() ?? 'N/A';
+    final code = item['transactionCode']?.toString().trim().isEmpty ?? true ? 'Không có' : item['transactionCode'].toString().trim();
     final type = item['type']?.toString() ?? '';
     final amount = (item['amount'] as num?)?.toDouble() ?? 0;
     final status = item['status']?.toString().toLowerCase() ?? 'completed';
@@ -335,7 +367,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final filtered = _transactions.where((item) {
       // 1. Lọc theo danh mục
       final type = item['type']?.toString().toLowerCase() ?? '';
-      if (_selectedCategory == 'deposit' && type != 'deposit') return false;
+      if (_selectedCategory == 'deposit' &&
+          type != 'deposit' &&
+          type != 'wallet_deposit') return false;
       if (_selectedCategory == 'topup' &&
           type != 'mobile_topup' &&
           type != 'data_topup') return false;
@@ -343,7 +377,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       if (_selectedCategory == 'fund' &&
           type != 'fund_contribution' &&
           type != 'fund_withdrawal') return false;
-      if (_selectedCategory == 'jar' && type != 'spending_jar') return false;
+      if (_selectedCategory == 'jar' &&
+          type != 'spending_jar' &&
+          type != 'jar_contribution' &&
+          type != 'jar_spend') return false;
 
       // 2. Lọc theo từ khoá tìm kiếm
       if (_searchQuery.trim().isNotEmpty) {

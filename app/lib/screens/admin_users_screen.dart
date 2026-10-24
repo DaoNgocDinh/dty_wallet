@@ -622,7 +622,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                isAdmin ? 'Admin' : 'User',
+                                isAdmin ? 'Admin' : 'Người dùng',
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,

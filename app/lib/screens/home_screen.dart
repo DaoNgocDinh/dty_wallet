@@ -14,8 +14,6 @@ import 'mobile_topup_screen.dart';
 import 'notifications_sheet.dart';
 import 'profile_screen.dart';
 import 'transaction_history_screen.dart';
-import 'create_spending_jar_screen.dart';
-import 'spending_jar_detail_screen.dart';
 import 'spending_jars_screen.dart';
 
 /// Hàm định dạng tiền tệ VND: 0 -> '0 đ', 1000000 -> '1.000.000 đ'
@@ -46,6 +44,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentBottomNavIndex = 0; // 0: Trang chủ, 1: Nạp data, 2: Lịch sử, 3: Cá nhân
+
+  int _historyRefreshTrigger = 0; // Kích hoạt làm mới tự động mỗi khi vào Lịch sử giao dịch
   String? _walletMessage;
   String? _walletError;
   bool _loadedWallet = false;
@@ -314,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _currentBottomNavIndex = 1);
         break;
       case 'history':
-        setState(() => _currentBottomNavIndex = 2);
+        _openHistoryTab();
         break;
       case 'profile':
         setState(() => _currentBottomNavIndex = 3);
@@ -553,8 +553,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --- 3. Mở Lịch sử giao dịch ---
+  void _openHistoryTab() {
+    _clearSearch();
+    setState(() {
+      _currentBottomNavIndex = 2;
+      _historyRefreshTrigger++;
+    });
+  }
+
   void _showHistorySheet(BuildContext context) {
-    setState(() => _currentBottomNavIndex = 2);
+    _openHistoryTab();
   }
 
   // --- 4. Màn hình Thanh toán hóa đơn ---
@@ -606,7 +614,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Tab 2: Lịch sử giao dịch chuyên biệt
             TransactionHistoryScreen(
+              key: ValueKey('tx_history_$_historyRefreshTrigger'),
               isEmbedded: true,
+              isActive: _currentBottomNavIndex == 2,
               onBackToHome: () => setState(() => _currentBottomNavIndex = 0),
             ),
 
@@ -716,10 +726,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.receipt_long_rounded,
                   tooltip: 'Lịch sử giao dịch',
                   isActive: _currentBottomNavIndex == 2,
-                  onTap: () {
-                    _clearSearch();
-                    setState(() => _currentBottomNavIndex = 2);
-                  },
+                  onTap: _openHistoryTab,
                 ),
               ),
 
@@ -1574,7 +1581,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: 'L.sử giao dịch',
                 icon: Icons.receipt_long_rounded,
                 iconColor: const Color(0xFF7B1FA2),
-                onTap: () => setState(() => _currentBottomNavIndex = 2),
+                onTap: _openHistoryTab,
               ),
               _featureButton(
                 label: 'Thanh toán hđ',
@@ -1709,7 +1716,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 8),
             InkWell(
-              onTap: () => setState(() => _currentBottomNavIndex = 2),
+              onTap: _openHistoryTab,
               borderRadius: BorderRadius.circular(8),
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -1733,7 +1740,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTransactionHistoryCard(BuildContext context) {
     return InkWell(
-      onTap: () => setState(() => _currentBottomNavIndex = 2),
+      onTap: _openHistoryTab,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

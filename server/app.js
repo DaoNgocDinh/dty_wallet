@@ -41,7 +41,7 @@ app.use('/api', function(err, req, res, next) {
   var status = err.status || (err.name === 'ValidationError' || err.name === 'CastError' ? 400 : err.code === 11000 ? 409 : 500);
   var isDevelopment = req.app.get('env') === 'development';
   res.status(status).json({
-    error: status < 500 || isDevelopment ? err.message : 'Internal server error',
+    error: status < 500 || isDevelopment ? err.message : 'Lỗi hệ thống máy chủ',
     ...(isDevelopment ? { stack: err.stack } : {})
   });
 });

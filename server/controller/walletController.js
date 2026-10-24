@@ -72,17 +72,17 @@ exports.depositIntent = async function(req, res) {
   var source = String(req.body.source || '').trim();
   var paymentMethod = String(req.body.paymentMethod || '').trim();
   if (!source || !Number.isFinite(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'source and positive amount are required' });
+    return res.status(400).json({ error: 'Vui lòng cung cấp nguồn tiền và số tiền lớn hơn 0' });
   }
   if (!paymentMethod && !req.body.qrInfo) {
-    return res.status(400).json({ error: 'paymentMethod or qrInfo is required' });
+    return res.status(400).json({ error: 'Phương thức thanh toán hoặc thông tin QR là bắt buộc' });
   }
   var transaction = await Transaction.create({
     transactionCode: code(), userId: req.user.id, account: req.user.email,
     type: 'wallet_deposit', amount: amount, sender: source, recipient: req.user.email,
     status: 'pending', metadata: { paymentMethod: paymentMethod || 'qr', hasQrInfo: Boolean(req.body.qrInfo) }
   });
-  res.status(202).json({ message: 'Deposit request created; wallet is credited after payment confirmation', transaction: transaction });
+  res.status(202).json({ message: 'Đã tạo yêu cầu nạp tiền; ví sẽ được cộng tiền sau khi thanh toán thành công', transaction: transaction });
 };
 
 exports.demoDeposit = async function(req, res) {

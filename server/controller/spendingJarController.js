@@ -70,7 +70,7 @@ exports.create = async function(req, res) {
 
 exports.details = async function(req, res) {
   var jar = await SpendingJar.findOne({ _id: req.params.id, userId: req.user.id });
-  if (!jar) return res.status(404).json({ error: 'Spending jar not found' });
+  if (!jar) return res.status(404).json({ error: 'Hũ chi tiêu không tồn tại' });
   var year = Number(req.query.year);
   var month = Number(req.query.month);
   var page = req.query.page === undefined ? 1 : Number(req.query.page);

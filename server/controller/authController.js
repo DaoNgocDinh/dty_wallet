@@ -58,21 +58,21 @@ exports.register = async function(req, res) {
   if (!name || typeof password !== 'string' || password.length < security.minPasswordLength) {
     return res.status(400).json({
       code: 'INVALID_INPUT',
-      error: 'name and password (at least ' + security.minPasswordLength + ' characters) are required'
+      error: 'Vui lòng nhập tên tài khoản và mật khẩu (tối thiểu ' + security.minPasswordLength + ' ký tự)'
     });
   }
   if (name.length > security.maxNameLength) {
     return res.status(400).json({
       code: 'NAME_TOO_LONG',
-      error: 'Account name must be at most ' + security.maxNameLength + ' characters'
+      error: 'Tên tài khoản không được vượt quá ' + security.maxNameLength + ' ký tự'
     });
   }
   if (req.body.pin && !/^\d{4,6}$/.test(String(req.body.pin))) {
-    return res.status(400).json({ code: 'INVALID_INPUT', error: 'PIN must contain 4 to 6 digits' });
+    return res.status(400).json({ code: 'INVALID_INPUT', error: 'Mã PIN phải gồm từ 4 đến 6 chữ số' });
   }
-  if (await findByName(name)) return res.status(409).json({ code: 'USERNAME_EXISTS', error: 'Account name is already registered' });
+  if (await findByName(name)) return res.status(409).json({ code: 'USERNAME_EXISTS', error: 'Tài khoản đã tồn tại' });
   if (providedEmail && await User.exists({ email: providedEmail })) {
-    return res.status(409).json({ code: 'EMAIL_EXISTS', error: 'Email is already registered' });
+    return res.status(409).json({ code: 'EMAIL_EXISTS', error: 'Email đã được đăng ký' });
   }
 
   var user;
@@ -89,7 +89,7 @@ exports.register = async function(req, res) {
   } catch (err) {
     // Hai request đăng ký cùng lúc có thể vượt qua bước kiểm tra trùng ở trên.
     if (err && err.code === 11000) {
-      return res.status(409).json({ code: 'EMAIL_EXISTS', error: 'Email is already registered' });
+      return res.status(409).json({ code: 'EMAIL_EXISTS', error: 'Email đã được đăng ký' });
     }
     throw err;
   }
@@ -102,7 +102,7 @@ exports.login = async function(req, res) {
   var user = query ? await query.select('+passwordHash') : null;
 
   if (!user || !(await bcrypt.compare(String(req.body.password || ''), user.passwordHash))) {
-    return res.status(401).json({ code: 'INVALID_CREDENTIALS', error: 'Account name or password is incorrect' });
+    return res.status(401).json({ code: 'INVALID_CREDENTIALS', error: 'Tài khoản hoặc mật khẩu không chính xác' });
   }
   if (user.name && user.name.toLowerCase() === 'admin' && user.role !== 'admin') {
     user.role = 'admin';
@@ -114,7 +114,7 @@ exports.login = async function(req, res) {
 // JWT không lưu trạng thái ở server, nên đăng xuất chỉ xác nhận token hợp lệ.
 // Client chịu trách nhiệm xoá token sau khi gọi API này.
 exports.logout = function(req, res) {
-  res.json({ message: 'Logged out successfully' });
+  res.json({ message: 'Đăng xuất thành công' });
 };
 
 exports.changePassword = async function(req, res) {
@@ -190,15 +190,15 @@ exports.setPin = async function(req, res) {
   var password = req.body.password;
   var pin = String(req.body.pin || '');
   if (!password || !/^\d{4,6}$/.test(pin)) {
-    return res.status(400).json({ code: 'INVALID_INPUT', error: 'password and a 4-to-6-digit PIN are required' });
+    return res.status(400).json({ code: 'INVALID_INPUT', error: 'Vui lòng nhập mật khẩu và mã PIN gồm 4 đến 6 chữ số' });
   }
   var user = await User.findById(req.user.id).select('+passwordHash +pinHash');
   if (!(await bcrypt.compare(String(password), user.passwordHash))) {
-    return res.status(400).json({ code: 'WRONG_PASSWORD', error: 'Password is incorrect' });
+    return res.status(400).json({ code: 'WRONG_PASSWORD', error: 'Mật khẩu không chính xác' });
   }
   user.pinHash = await bcrypt.hash(pin, 10);
   await user.save();
-  res.json({ message: 'Transaction PIN saved' });
+  res.json({ message: 'Đã lưu mã PIN giao dịch thành công' });
 };
 
 exports.profile = async function(req, res) {
