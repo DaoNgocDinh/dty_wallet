@@ -84,6 +84,55 @@ exports.depositIntent = async function(req, res) {
   res.status(202).json({ message: 'Deposit request created; wallet is credited after payment confirmation', transaction: transaction });
 };
 
+exports.demoDeposit = async function(req, res) {
+  if (process.env.DEMO_DEPOSITS_ENABLED !== 'true') {
+    return res.status(403).json({ error: 'Nạp tiền demo hiện chưa được bật' });
+  }
+
+  var amountValue = req.body.amount;
+  var amount = typeof amountValue === 'number' || typeof amountValue === 'string'
+    ? Number(amountValue)
+    : NaN;
+  var source = String(req.body.source || '').trim();
+  if (!source || !Number.isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'Vui lòng nhập nguồn tiền và số tiền hợp lệ' });
+  }
+
+  var user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+
+  var updatedUser = await User.findByIdAndUpdate(
+    user.id,
+    { $inc: { walletBalance: amount } },
+    { new: true }
+  );
+  var transaction;
+  try {
+    transaction = await Transaction.create({
+      transactionCode: code(),
+      userId: user.id,
+      account: user.email,
+      type: 'wallet_deposit',
+      amount: amount,
+      sender: source,
+      recipient: user.email,
+      status: 'completed',
+      note: 'Nạp tiền mô phỏng (demo)',
+      metadata: { paymentMethod: 'demo', demo: true }
+    });
+  } catch (error) {
+    await User.updateOne({ _id: user.id }, { $inc: { walletBalance: -amount } });
+    throw error;
+  }
+
+  res.status(201).json({
+    message: 'Nạp tiền demo thành công',
+    transaction: transaction,
+    walletBalance: updatedUser.walletBalance
+  });
+};
+
+
 /**
  * 2.1.8 Chức năng Nạp tiền điện thoại / Nạp gói Data (Use Case 08 - Cao Thái Tuấn)
  */

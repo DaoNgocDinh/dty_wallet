@@ -1,4 +1,3 @@
-var bcrypt = require('bcryptjs');
 var crypto = require('crypto');
 var SpendingJar = require('../model/SpendingJar');
 var Transaction = require('../model/Transaction');
@@ -10,27 +9,47 @@ exports.list = async function(req, res) {
 };
 
 exports.create = async function(req, res) {
-  var name = String(req.body.name || '').trim();
-  var amount = Number(req.body.amount);
-  if (!name || !Number.isFinite(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'name and positive amount are required' });
+  var name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+  var amountValue = req.body.amount;
+  var amount = typeof amountValue === 'number' || typeof amountValue === 'string'
+    ? Number(amountValue)
+    : NaN;
+  if (!name || name.length > 100 || !Number.isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'Tên hũ không hợp lệ hoặc số tiền phải lớn hơn 0' });
   }
-  var user = await verifyPin(req, res);
-  if (!user) return;
-  var debited = await User.findOneAndUpdate({ _id: user.id, walletBalance: { $gte: amount } }, { $inc: { walletBalance: -amount } }, { new: true });
-  if (!debited) return res.status(400).json({ error: 'Insufficient wallet balance' });
+  var escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  var existingJar = await SpendingJar.findOne({
+    userId: req.user.id,
+    name: new RegExp('^' + escapedName + '$', 'i')
+  });
+  if (existingJar) {
+    return res.status(409).json({
+      code: 'SPENDING_JAR_NAME_EXISTS',
+      error: 'Tên hũ này đã tồn tại. Vui lòng chọn tên khác.'
+    });
+  }
+
+  var debited = await User.findOneAndUpdate(
+    { _id: req.user.id, walletBalance: { $gte: amount } },
+    { $inc: { walletBalance: -amount } },
+    { new: true }
+  );
+  if (!debited) {
+    return res.status(400).json({ error: 'Số dư ví không đủ để tạo hũ chi tiêu' });
+  }
   var jar;
   try {
-    jar = await SpendingJar.create({ userId: user.id, name: name, balance: amount });
+    var user = await User.findById(req.user.id);
+    jar = await SpendingJar.create({ userId: req.user.id, name: name, balance: amount });
     await Transaction.create({
-      transactionCode: code(), userId: user.id, account: user.email,
+      transactionCode: code(), userId: req.user.id, account: user.email,
       type: 'jar_contribution', amount: amount, sender: user.email, recipient: name,
-      status: 'completed', metadata: { jarId: jar.id }
+      status: 'completed', metadata: { jarId: jar.id, balanceAfter: amount }
     });
     res.status(201).json({ jar: jar, walletBalance: debited.walletBalance });
   } catch (error) {
     if (jar) await SpendingJar.deleteOne({ _id: jar.id });
-    await User.updateOne({ _id: user.id }, { $inc: { walletBalance: amount } });
+    await User.updateOne({ _id: req.user.id }, { $inc: { walletBalance: amount } });
     throw error;
   }
 };
@@ -40,30 +59,72 @@ exports.details = async function(req, res) {
   if (!jar) return res.status(404).json({ error: 'Spending jar not found' });
   var year = Number(req.query.year);
   var month = Number(req.query.month);
+  var page = req.query.page === undefined ? 1 : Number(req.query.page);
+  var limit = req.query.limit === undefined ? 10 : Math.min(Number(req.query.limit), 10);
   var filter = { userId: req.user.id, 'metadata.jarId': jar.id };
   if (req.query.year || req.query.month) {
     if (!Number.isInteger(year) || year < 1970 || !Number.isInteger(month) || month < 1 || month > 12) {
-      return res.status(400).json({ error: 'Provide both a valid year and month (1-12)' });
+      return res.status(400).json({ error: 'Vui lòng chọn tháng và năm hợp lệ' });
     }
     var start = new Date(year, month - 1, 1);
     var end = new Date(year, month, 1);
     filter.createdAt = { $gte: start, $lt: end };
   }
-  var transactions = await Transaction.find(filter).sort({ createdAt: -1 });
-  res.json({ jar: jar, period: req.query.year ? { year: year, month: month } : null, transactions: transactions });
-};
+  if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1) {
+    return res.status(400).json({ error: 'Số trang không hợp lệ' });
+  }
 
-async function verifyPin(req, res) {
-  var user = await User.findById(req.user.id).select('+pinHash');
-  if (!user.pinHash) {
-    res.status(409).json({ error: 'Set a transaction PIN before creating a spending jar' });
-    return null;
+  var count = await Transaction.countDocuments(filter);
+  var transactions = await Transaction.find(filter)
+    .sort({ createdAt: -1, _id: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit);
+
+  if (transactions.length) {
+    var newest = transactions[0];
+    var balanceAfter = newest.metadata && newest.metadata.balanceAfter;
+    if (typeof balanceAfter !== 'number') {
+      var newerTotals = await Transaction.aggregate([
+        { $match: { userId: jar.userId, 'metadata.jarId': jar.id, createdAt: { $gt: newest.createdAt } } },
+        {
+          $group: {
+            _id: null,
+            balanceDelta: {
+              $sum: {
+                $cond: [
+                  { $eq: ['$type', 'jar_contribution'] },
+                  '$amount',
+                  { $multiply: ['$amount', -1] }
+                ]
+              }
+            }
+          }
+        }
+      ]);
+      balanceAfter = jar.balance - (newerTotals[0] ? newerTotals[0].balanceDelta : 0);
+    }
+
+    transactions = transactions.map(function(transaction, index) {
+      var item = transaction.toObject();
+      if (index > 0) {
+        var previous = transactions[index - 1];
+        var delta = previous.type === 'jar_contribution' ? previous.amount : -previous.amount;
+        balanceAfter -= delta;
+      }
+      item.balanceAfter = balanceAfter;
+      return item;
+    });
   }
-  if (!(await bcrypt.compare(String(req.body.pin || ''), user.pinHash))) {
-    res.status(401).json({ error: 'Transaction PIN is incorrect' });
-    return null;
-  }
-  return user;
-}
+
+  res.json({
+    jar: jar,
+    period: req.query.year ? { year: year, month: month } : null,
+    count: count,
+    page: page,
+    pageSize: limit,
+    totalPages: Math.ceil(count / limit),
+    transactions: transactions
+  });
+};
 
 function code() { return 'TX-' + crypto.randomUUID(); }

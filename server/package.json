@@ -5,14 +5,16 @@
   "scripts": {
     "start": "node ./bin/www",
     "seed": "node ./db/seed.js",
-    "test": "node ./test/fund_test.js && node ./test/invite_member_test.js && node ./test/admin_test.js && node ./test/fund_withdraw_test.js && node ./test/couple_fund_test.js && node ./test/topup_test.js && node ./test/bill_payment_test.js && node ./test/feature_search_test.js",
-    "test:features": "node ./test/feature_search_test.js",
-    "test:topup": "node ./test/topup_test.js",
-    "test:admin": "node ./test/admin_test.js",
-    "test:invite": "node ./test/invite_member_test.js",
-    "test:withdraw": "node ./test/fund_withdraw_test.js",
-    "test:couple": "node ./test/couple_fund_test.js",
-    "test:bill": "node ./test/bill_payment_test.js"
+    "test": "node ./test/run_tests.js",
+    "test:features": "node ./test/run_tests.js feature_search_test.js",
+    "test:topup": "node ./test/run_tests.js topup_test.js",
+    "test:bill": "node ./test/run_tests.js bill_payment_test.js",
+    "test:admin": "node ./test/run_tests.js admin_test.js",
+    "test:invite": "node ./test/run_tests.js invite_member_test.js",
+    "test:withdraw": "node ./test/run_tests.js fund_withdraw_test.js",
+    "test:couple": "node ./test/run_tests.js couple_fund_test.js",
+    "test:spending-jar": "node ./test/run_tests.js spending_jar_test.js",
+    "test:wallet-demo": "node ./test/run_tests.js wallet_demo_deposit_test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
