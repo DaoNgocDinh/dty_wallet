@@ -28,7 +28,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   Win32Window::Point origin(100, 20);
   // Kích thước chuẩn hoá theo iPhone 18 (viewport 402x874 pt)
   Win32Window::Size size(420, 920);
-  if (!window.Create(L"Ví điện tử (iPhone 18)", origin, size)) {
+  if (!window.Create(L"dty_wallet", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

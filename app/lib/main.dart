@@ -32,7 +32,7 @@ class _MyAppState extends State<MyApp> {
     return AppScope(
       session: _session,
       child: MaterialApp(
-        title: 'Ví điện tử',
+        title: 'dty_wallet',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         home: const LoginScreen(),
