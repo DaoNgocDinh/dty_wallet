@@ -16,6 +16,7 @@ import 'profile_screen.dart';
 import 'transaction_history_screen.dart';
 import 'create_spending_jar_screen.dart';
 import 'spending_jar_detail_screen.dart';
+import 'spending_jars_screen.dart';
 
 /// Hàm định dạng tiền tệ VND: 0 -> '0 đ', 1000000 -> '1.000.000 đ'
 String formatVnd(dynamic amount) {
@@ -325,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _openFundsScreen(context);
         break;
       case 'spending_jars':
-        _showJarsSheet(context);
+        _openSpendingJarsScreen(context);
         break;
       case 'notifications':
         _openNotifications(context);
@@ -572,148 +573,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- 6. Bottom Sheet: Hũ chi tiêu ---
-  void _showJarsSheet(BuildContext context) {
-    final session = AppScope.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    var jarsFuture = session.fetchSpendingJars();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetCtx) => StatefulBuilder(
-        builder: (sheetCtx, setSheetState) => Container(
-          height: MediaQuery.of(sheetCtx).size.height * 0.65,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Hũ chi tiêu',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        tooltip: 'Thêm hũ chi tiêu',
-                        icon: const Icon(Icons.add_circle_outline_rounded),
-                        onPressed: () async {
-                          final created = await Navigator.of(sheetCtx)
-                              .push<bool>(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const CreateSpendingJarScreen(),
-                                ),
-                              );
-                          if (created == true && mounted) {
-                            setSheetState(() {
-                              jarsFuture = session.fetchSpendingJars();
-                            });
-                            await _loadWallet();
-                            if (mounted) {
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text('Tạo hũ mới thành công!'),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.of(sheetCtx).pop(),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: FutureBuilder<Map<String, dynamic>>(
-                  future: jarsFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.lightBlue,
-                        ),
-                      );
-                    }
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          snapshot.error is ApiException
-                              ? (snapshot.error! as ApiException).message
-                              : 'Không thể tải danh sách hũ chi tiêu',
-                          textAlign: TextAlign.center,
-                        ),
-                      );
-                    }
-                    final list = (snapshot.data?['data'] as List?) ?? [];
-                    if (list.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'Chưa có hũ chi tiêu nào',
-                          style: TextStyle(color: AppColors.textSecondary),
-                        ),
-                      );
-                    }
-                    return ListView.builder(
-                      itemCount: list.length,
-                      itemBuilder: (context, index) {
-                        final item = list[index] as Map<String, dynamic>;
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: ListTile(
-                            leading: const CircleAvatar(
-                              backgroundColor: Colors.teal,
-                              child: Icon(
-                                Icons.all_inbox_rounded,
-                                color: Colors.white,
-                              ),
-                            ),
-                            title: Text(
-                              item['name']?.toString() ?? 'Hũ chi tiêu',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: const Text('Chạm để xem chi tiết'),
-                            trailing: Text(
-                              formatVnd(item['balance']),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            onTap: () {
-                              Navigator.of(sheetCtx).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) =>
-                                      SpendingJarDetailScreen(jar: item),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  // --- 6. Màn hình riêng biệt: Hũ chi tiêu ---
+  Future<void> _openSpendingJarsScreen(BuildContext context) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SpendingJarsScreen()),
     );
+    if (mounted) {
+      _loadWallet();
+      _loadNotifications();
+    }
   }
 
   // ==========================================
@@ -1724,7 +1592,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: 'Hũ chi tiêu',
                 icon: Icons.all_inbox_rounded,
                 iconColor: const Color(0xFF00838F),
-                onTap: () => _showJarsSheet(context),
+                onTap: () => _openSpendingJarsScreen(context),
               ),
               if (user?.isAdmin == true)
                 _featureButton(
@@ -1998,7 +1866,7 @@ class _HomeScreenState extends State<HomeScreen> {
           iconColor: const Color(0xFF00838F),
           title: 'Chi tiêu tháng $currentMonth',
           subtitle: updateTimeStr,
-          onTap: () => _showJarsSheet(context),
+          onTap: () => _openSpendingJarsScreen(context),
         ),
       ],
     );

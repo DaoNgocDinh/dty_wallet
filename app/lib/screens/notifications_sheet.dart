@@ -4,6 +4,9 @@ import '../services/api_client.dart';
 import '../state/app_session.dart';
 import '../theme/app_theme.dart';
 import 'fund_screens/fund_invitations_screen.dart';
+import 'fund_screens/funds_screen.dart';
+import 'spending_jars_screen.dart';
+import 'transaction_history_screen.dart';
 
 /// Modal bottom sheet hiển thị danh sách thông báo
 class NotificationsSheet extends StatefulWidget {
@@ -101,14 +104,113 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
       } catch (_) {}
     }
 
-    // Nếu bấm vào lời mời quỹ -> chuyển sang màn hình kiểm tra lời mời hiện có
+    if (!mounted) return;
+
     if (type == 'fund_invitation' || item['metadata']?['invitationId'] != null) {
-      if (!mounted) return;
-      Navigator.of(context).pop(); // Đóng bottom sheet
+      Navigator.of(context).pop();
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const FundInvitationsScreen()),
       );
+    } else if (type == 'fund' ||
+        type == 'fund_contribution' ||
+        type == 'fund_withdrawal' ||
+        type == 'invitation_accepted') {
+      Navigator.of(context).pop();
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const FundsScreen()),
+      );
+    } else if (type == 'spending_jar') {
+      Navigator.of(context).pop();
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const SpendingJarsScreen()),
+      );
+    } else if (type == 'wallet_deposit' ||
+        type == 'mobile_topup' ||
+        type == 'data_topup' ||
+        type == 'bill_payment') {
+      Navigator.of(context).pop();
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const TransactionHistoryScreen()),
+      );
     }
+  }
+
+  IconData _getTypeIcon(String type) {
+    switch (type) {
+      case 'wallet_deposit':
+        return Icons.account_balance_wallet_rounded;
+      case 'mobile_topup':
+        return Icons.phone_android_rounded;
+      case 'data_topup':
+        return Icons.wifi_rounded;
+      case 'bill_payment':
+        return Icons.receipt_long_rounded;
+      case 'spending_jar':
+        return Icons.all_inbox_rounded;
+      case 'fund':
+      case 'fund_contribution':
+      case 'fund_withdrawal':
+        return Icons.savings_rounded;
+      case 'fund_invitation':
+        return Icons.mail_rounded;
+      case 'invitation_accepted':
+        return Icons.check_circle_rounded;
+      case 'invitation_rejected':
+      case 'member_left':
+        return Icons.cancel_rounded;
+      default:
+        return Icons.notifications_rounded;
+    }
+  }
+
+  Color _getTypeColor(String type) {
+    switch (type) {
+      case 'wallet_deposit':
+        return const Color(0xFF2E7D32);
+      case 'mobile_topup':
+        return const Color(0xFF00897B);
+      case 'data_topup':
+        return const Color(0xFF0288D1);
+      case 'bill_payment':
+        return const Color(0xFFEF6C00);
+      case 'spending_jar':
+        return const Color(0xFF00796B);
+      case 'fund':
+      case 'fund_contribution':
+      case 'fund_withdrawal':
+        return const Color(0xFF7B1FA2);
+      case 'fund_invitation':
+        return const Color(0xFFE53935);
+      case 'invitation_accepted':
+        return const Color(0xFF2E7D32);
+      case 'invitation_rejected':
+      case 'member_left':
+        return const Color(0xFFD32F2F);
+      default:
+        return AppColors.lightBlue;
+    }
+  }
+
+  String? _getActionLabel(String type, Map<String, dynamic>? metadata) {
+    if (type == 'fund_invitation' || metadata?['invitationId'] != null) {
+      return 'Nhấn để xem lời mời';
+    }
+    if (type == 'fund' ||
+        type == 'fund_contribution' ||
+        type == 'fund_withdrawal' ||
+        type == 'invitation_accepted') {
+      return 'Nhấn để xem Quỹ';
+    }
+    if (type == 'spending_jar') {
+      return 'Nhấn để xem Hũ chi tiêu';
+    }
+    if (type == 'wallet_deposit' ||
+        type == 'mobile_topup' ||
+        type == 'data_topup' ||
+        type == 'bill_payment') {
+      return 'Nhấn để xem chi tiết giao dịch';
+    }
+    return null;
   }
 
   String _formatTime(dynamic dateVal) {
@@ -252,12 +354,14 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
         final type = item['type']?.toString() ?? '';
         final timeStr = _formatTime(item['createdAt']);
 
-        final isInvite = type == 'fund_invitation' || item['metadata']?['invitationId'] != null;
+        final iconColor = _getTypeColor(type);
+        final iconData = _getTypeIcon(type);
+        final actionLabel = _getActionLabel(type, item['metadata'] as Map<String, dynamic>?);
 
         return InkWell(
           onTap: () => _handleNotificationTap(item),
           child: Container(
-            color: isRead ? Colors.transparent : AppColors.lightBlue.withValues(alpha: 0.05),
+            color: isRead ? Colors.transparent : iconColor.withValues(alpha: 0.05),
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,14 +371,12 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: isInvite
-                        ? const Color(0xFFE53935).withValues(alpha: 0.12)
-                        : AppColors.lightBlue.withValues(alpha: 0.12),
+                    color: iconColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    isInvite ? Icons.mail_rounded : Icons.notifications_rounded,
-                    color: isInvite ? const Color(0xFFE53935) : AppColors.lightBlue,
+                    iconData,
+                    color: iconColor,
                     size: 22,
                   ),
                 ),
@@ -314,20 +416,20 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
                           fontWeight: isRead ? FontWeight.normal : FontWeight.w500,
                         ),
                       ),
-                      if (isInvite) ...[
+                      if (actionLabel != null) ...[
                         const SizedBox(height: 6),
-                        const Row(
+                        Row(
                           children: [
                             Text(
-                              'Nhấn để xem lời mời',
+                              actionLabel,
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.lightBlueDark,
+                                color: iconColor,
                               ),
                             ),
-                            SizedBox(width: 4),
-                            Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppColors.lightBlueDark),
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_ios_rounded, size: 10, color: iconColor),
                           ],
                         ),
                       ],

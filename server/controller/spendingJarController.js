@@ -2,6 +2,7 @@ var crypto = require('crypto');
 var SpendingJar = require('../model/SpendingJar');
 var Transaction = require('../model/Transaction');
 var User = require('../model/User');
+var Notification = require('../model/Notification');
 
 exports.list = async function(req, res) {
   var jars = await SpendingJar.find({ userId: req.user.id }).sort({ createdAt: -1 });
@@ -46,6 +47,19 @@ exports.create = async function(req, res) {
       type: 'jar_contribution', amount: amount, sender: user.email, recipient: name,
       status: 'completed', metadata: { jarId: jar.id, balanceAfter: amount }
     });
+    try {
+      await Notification.create({
+        userId: req.user.id,
+        title: 'Tạo hũ chi tiêu thành công',
+        message: 'Bạn đã tạo hũ chi tiêu "' + name + '" với số tiền ban đầu ' + Number(amount).toLocaleString('vi-VN') + 'đ.',
+        type: 'spending_jar',
+        metadata: {
+          jarId: jar.id,
+          jarName: name,
+          amount: amount
+        }
+      });
+    } catch (_) {}
     res.status(201).json({ jar: jar, walletBalance: debited.walletBalance });
   } catch (error) {
     if (jar) await SpendingJar.deleteOne({ _id: jar.id });

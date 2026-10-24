@@ -108,6 +108,22 @@ exports.create = async function(req, res) {
     members: [{ userId: req.user.id, role: 'owner', joinedAt: new Date() }]
   });
 
+  if (!partner) {
+    try {
+      await Notification.create({
+        userId: req.user.id,
+        title: 'Tạo quỹ thành công',
+        message: 'Bạn đã tạo quỹ "' + fund.name + '" (' + fund.fundType + ') thành công.',
+        type: 'fund',
+        metadata: {
+          fundId: fund._id,
+          fundName: fund.name,
+          fundType: fund.fundType
+        }
+      });
+    } catch (_) {}
+  }
+
   // Quỹ cặp đôi chỉ được lập chính thức khi người được chọn đồng ý tham gia
   var invitation = null;
   if (partner) {
@@ -410,6 +426,21 @@ exports.withdraw = async function(req, res) {
       metadata: { fundId: fund.id, fundName: fund.name }
     });
 
+    try {
+      await Notification.create({
+        userId: user._id,
+        title: 'Rút tiền từ quỹ thành công',
+        message: 'Bạn đã rút ' + Number(amount).toLocaleString('vi-VN') + 'đ từ quỹ "' + fund.name + '" về ví cá nhân.',
+        type: 'fund_withdrawal',
+        metadata: {
+          fundId: fund.id,
+          fundName: fund.name,
+          amount: amount,
+          transactionCode: txn.transactionCode
+        }
+      });
+    } catch (_) {}
+
     res.json({
       message: 'Rút tiền thành công',
       fund: updatedFund,
@@ -512,6 +543,37 @@ exports.contribute = async function(req, res) {
       status: 'completed',
       metadata: { fundId: fund.id, fundName: fund.name }
     });
+
+    try {
+      await Notification.create({
+        userId: user.id,
+        title: 'Góp quỹ thành công',
+        message: 'Bạn đã góp ' + Number(amount).toLocaleString('vi-VN') + 'đ vào quỹ "' + fund.name + '".',
+        type: 'fund_contribution',
+        metadata: {
+          fundId: fund.id,
+          fundName: fund.name,
+          amount: amount,
+          transactionCode: txn.transactionCode
+        }
+      });
+      var ownerId = fund.userId ? (fund.userId._id || fund.userId).toString() : '';
+      if (ownerId && ownerId !== user.id.toString()) {
+        await Notification.create({
+          userId: fund.userId,
+          title: 'Quỹ nhận được tiền đóng góp',
+          message: (user.name || user.email) + ' đã góp ' + Number(amount).toLocaleString('vi-VN') + 'đ vào quỹ "' + fund.name + '".',
+          type: 'fund_contribution',
+          metadata: {
+            fundId: fund.id,
+            fundName: fund.name,
+            contributorName: user.name || user.email,
+            amount: amount,
+            transactionCode: txn.transactionCode
+          }
+        });
+      }
+    } catch (_) {}
 
     res.json({
       message: 'Góp tiền thành công',

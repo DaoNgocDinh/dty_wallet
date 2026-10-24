@@ -378,6 +378,21 @@ exports.rejectInvite = async function(req, res) {
   invitation.status = 'rejected';
   await invitation.save();
 
+  try {
+    var rejectUser = await User.findById(req.user.id);
+    await Notification.create({
+      userId: invitation.inviterId,
+      title: 'Lời mời bị từ chối',
+      message: (rejectUser ? rejectUser.name : 'Người dùng') + ' đã từ chối tham gia quỹ "' + invitation.fundName + '"',
+      type: 'invitation_rejected',
+      metadata: {
+        invitationId: invitation._id,
+        fundId: invitation.fundId,
+        fundName: invitation.fundName
+      }
+    });
+  } catch (_) {}
+
   res.json({
     message: 'Đã từ chối lời mời',
     data: invitation

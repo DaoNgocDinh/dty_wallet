@@ -729,12 +729,16 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                       ),
                                                       if (code.isNotEmpty) ...[
                                                         const SizedBox(width: 6),
-                                                        Text(
-                                                          '• $code',
-                                                          style: TextStyle(
-                                                            fontSize: 11,
-                                                            color: AppColors.textSecondary
-                                                                .withValues(alpha: 0.8),
+                                                        Expanded(
+                                                          child: Text(
+                                                            '• $code',
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis,
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              color: AppColors.textSecondary
+                                                                  .withValues(alpha: 0.8),
+                                                            ),
                                                           ),
                                                         ),
                                                       ],
@@ -743,6 +747,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                 ],
                                               ),
                                             ),
+                                            const SizedBox(width: 8),
 
                                             // Số tiền và trạng thái
                                             Column(

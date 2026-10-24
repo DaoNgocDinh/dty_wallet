@@ -2,6 +2,7 @@ var bcrypt = require('bcryptjs');
 var crypto = require('crypto');
 var Transaction = require('../model/Transaction');
 var User = require('../model/User');
+var Notification = require('../model/Notification');
 
 // Danh sách các gói Data mẫu cho 4 nhà mạng theo chuẩn thị trường Việt Nam
 var DATA_PACKAGES = [
@@ -120,6 +121,20 @@ exports.demoDeposit = async function(req, res) {
       note: 'Nạp tiền mô phỏng (demo)',
       metadata: { paymentMethod: 'demo', demo: true }
     });
+
+    try {
+      await Notification.create({
+        userId: user.id,
+        title: 'Nạp tiền vào ví thành công',
+        message: 'Bạn đã nạp thành công ' + Number(amount).toLocaleString('vi-VN') + 'đ vào ví từ ' + source + '.',
+        type: 'wallet_deposit',
+        metadata: {
+          amount: amount,
+          source: source,
+          transactionCode: transaction.transactionCode
+        }
+      });
+    } catch (_) {}
   } catch (error) {
     await User.updateOne({ _id: user.id }, { $inc: { walletBalance: -amount } });
     throw error;
@@ -251,6 +266,38 @@ exports.mobileTopup = function(type) {
         duration: isData ? pkg.duration : null
       }
     });
+
+    // 10. Tạo thông báo
+    try {
+      if (isData) {
+        await Notification.create({
+          userId: user._id,
+          title: 'Đăng ký gói Data thành công',
+          message: 'Bạn đã đăng ký gói ' + (pkg ? pkg.name : '') + ' (' + (pkg ? pkg.data : '') + ') mạng ' + normalizedCarrier + ' cho số ' + phoneNumber + ' với giá ' + Number(amount).toLocaleString('vi-VN') + 'đ.',
+          type: 'data_topup',
+          metadata: {
+            carrier: normalizedCarrier,
+            phoneNumber: phoneNumber,
+            packageName: pkg ? pkg.name : null,
+            amount: amount,
+            transactionCode: transaction.transactionCode
+          }
+        });
+      } else {
+        await Notification.create({
+          userId: user._id,
+          title: 'Nạp tiền điện thoại thành công',
+          message: 'Bạn đã nạp ' + Number(amount).toLocaleString('vi-VN') + 'đ (' + normalizedCarrier + ') cho số điện thoại ' + phoneNumber + '.',
+          type: 'mobile_topup',
+          metadata: {
+            carrier: normalizedCarrier,
+            phoneNumber: phoneNumber,
+            amount: amount,
+            transactionCode: transaction.transactionCode
+          }
+        });
+      }
+    } catch (_) {}
 
     // 10. Trả về thông báo thành công (Bước 18)
     res.status(200).json({
@@ -439,6 +486,22 @@ exports.payBill = async function(req, res) {
       hasQr: paymentMethod === 'qr'
     }
   });
+
+  try {
+    await Notification.create({
+      userId: user._id,
+      title: 'Thanh toán hóa đơn ' + bill.billType + ' thành công',
+      message: 'Bạn đã thanh toán thành công hóa đơn ' + bill.billType + ' (' + bill.provider + '), mã khách hàng ' + bill.customerCode + ' với số tiền ' + Number(totalAmount).toLocaleString('vi-VN') + 'đ.',
+      type: 'bill_payment',
+      metadata: {
+        billType: bill.billType,
+        provider: bill.provider,
+        customerCode: bill.customerCode,
+        totalAmount: totalAmount,
+        transactionCode: transaction.transactionCode
+      }
+    });
+  } catch (_) {}
 
   res.status(200).json({
     success: true,
