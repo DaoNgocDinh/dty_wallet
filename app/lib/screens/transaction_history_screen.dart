@@ -436,7 +436,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             : IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded),
                 tooltip: 'Quay lại',
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                },
               ),
         actions: [
           IconButton(

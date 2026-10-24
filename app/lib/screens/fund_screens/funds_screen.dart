@@ -107,12 +107,20 @@ class _FundsScreenState extends State<FundsScreen> {
                     children: [
                       BackLabel(
                         text: 'Trang chủ',
-                        onTap: () => Navigator.of(context).pop(),
+                        onTap: () {
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          }
+                        },
                       ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded),
                         tooltip: 'Đóng',
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () {
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          }
+                        },
                       ),
                     ],
                   ),

@@ -609,7 +609,10 @@ class _HomeScreenState extends State<HomeScreen> {
             MobileTopupScreen(
               initialIsData: false,
               isEmbedded: true,
-              onBackToHome: () => setState(() => _currentBottomNavIndex = 0),
+              onBackToHome: () {
+                setState(() => _currentBottomNavIndex = 0);
+                _loadWallet();
+              },
             ),
 
             // Tab 2: Lịch sử giao dịch chuyên biệt

@@ -371,7 +371,19 @@ class _BillPaymentScreenState extends State<BillPaymentScreen> {
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              Navigator.of(context).pop(); // Quay về trang chủ
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop(); // Quay về trang chủ
+              } else {
+                setState(() {
+                  _step = 1;
+                  _billInfo = null;
+                  _billError = null;
+                  _codeController.clear();
+                  _qrController.clear();
+                  _contentController.clear();
+                  _pinFailCount = 0;
+                });
+              }
             },
             child: const Text('Hoàn tất', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.lightBlue)),
           ),
@@ -488,7 +500,9 @@ class _BillPaymentScreenState extends State<BillPaymentScreen> {
                 }
               });
             } else {
-              Navigator.of(context).pop();
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
             }
           },
         ),

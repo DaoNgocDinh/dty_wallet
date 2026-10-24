@@ -240,7 +240,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       BackLabel(
-                        onTap: () => Navigator.of(context).pop(),
+                        onTap: () {
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          }
+                        },
                         text: 'Trở về',
                       ),
                       Container(

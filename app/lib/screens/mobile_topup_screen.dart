@@ -647,7 +647,11 @@ class _MobileTopupScreenState extends State<MobileTopupScreen> {
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
-              Navigator.of(context).pop(); // Trở về Home để nạp ví
+              if (widget.onBackToHome != null) {
+                widget.onBackToHome!();
+              } else if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop(); // Trở về Home để nạp ví
+              }
             },
             child: const Text('Đóng'),
           ),
@@ -767,7 +771,11 @@ class _MobileTopupScreenState extends State<MobileTopupScreen> {
               ),
               onPressed: () {
                 Navigator.of(ctx).pop();
-                Navigator.of(context).pop(); // Quay lại trang trước
+                if (widget.onBackToHome != null) {
+                  widget.onBackToHome!();
+                } else if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop(); // Quay lại trang trước
+                }
               },
               child: const Text('Hoàn tất'),
             ),

@@ -4463,6 +4463,12 @@ void main() {
 
         // Số dư ví bị trừ 50.000đ (500.000 - 50.000 = 450.000)
         expect(session.user?.walletBalance, equals(450000));
+
+        // Nhấn Hoàn tất đóng dialog thành công an toàn, không bị pop văng ra màn hình đen
+        await tester.tap(find.text('Hoàn tất'));
+        await tester.pumpAndSettle();
+        expect(find.text('Giao dịch thành công'), findsNothing);
+        expect(find.byType(MobileTopupScreen), findsOneWidget);
       });
     });
   });
@@ -4764,6 +4770,11 @@ void main() {
 
         // Bước 15: Số dư ví bị trừ 350.000đ (1.000.000 - 350.000 = 650.000)
         expect(session.user?.walletBalance, equals(650000));
+
+        // Nhấn Hoàn tất không bị đen màn hình
+        await tester.tap(find.text('Hoàn tất'));
+        await tester.pumpAndSettle();
+        expect(find.text('Thanh toán thành công'), findsNothing);
       });
 
       testWidgets('Luồng thành công qua mã QR: Quét QR thanh toán hóa đơn điện 310.000đ', (tester) async {
