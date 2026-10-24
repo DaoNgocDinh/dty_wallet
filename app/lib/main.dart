@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/login_screen.dart';
+import 'screens/auth/login_screen.dart';
 import 'state/app_session.dart';
 import 'theme/app_theme.dart';
 

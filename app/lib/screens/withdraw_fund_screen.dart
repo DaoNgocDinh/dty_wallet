@@ -1,1 +1,1 @@
-export 'fund_screens/withdraw_fund_screen.dart';
+export 'funds/withdraw_fund_screen.dart';

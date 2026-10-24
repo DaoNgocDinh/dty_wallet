@@ -1,1 +1,1 @@
-export 'fund_screens/contribute_fund_screen.dart';
+export 'funds/contribute_fund_screen.dart';
