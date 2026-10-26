@@ -5,6 +5,7 @@ import 'package:app/screens/admin_users_screen.dart';
 import 'package:app/screens/change_password_screen.dart';
 import 'package:app/screens/create_fund_screen.dart';
 import 'package:app/screens/contribute_fund_screen.dart';
+import 'package:app/screens/deposit_wallet_screen.dart';
 import 'package:app/screens/fund_detail_screen.dart';
 import 'package:app/screens/funds_screen.dart';
 import 'package:app/screens/invite_member_screen.dart';
@@ -1191,38 +1192,39 @@ void main() {
     expect(find.text('Ẩn'), findsOneWidget);
   });
 
-  testWidgets(
-    'Trang chủ: Nút Nạp tiền cùng hàng với số dư và mở sheet Nạp tiền',
-    (tester) async {
-      await tester.pumpWidget(buildApp());
-      await _login(tester, account: 'admin', password: '123456');
+  testWidgets('Trang chủ: Nút Nạp ví mở màn hình nạp riêng', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await _login(tester, account: 'admin', password: '123456');
 
-      expect(find.byType(HomeScreen), findsOneWidget);
-      final depositBtn = find.text('Nạp tiền');
-      expect(depositBtn, findsOneWidget);
+    expect(find.byType(HomeScreen), findsOneWidget);
+    final depositBtn = find.text('Nạp ví');
+    expect(depositBtn, findsOneWidget);
+    expect(find.text('Nạp tiền'), findsNothing);
 
-      await tester.tap(depositBtn);
-      await tester.pumpAndSettle();
+    await tester.tap(depositBtn);
+    await tester.pumpAndSettle();
 
-      expect(find.text('Nạp tiền vào ví'), findsOneWidget);
-    },
-  );
+    expect(find.byType(DepositWalletScreen), findsOneWidget);
+    expect(find.text('Nạp ví'), findsNWidgets(2));
+    expect(find.text('Nạp tiền vào ví'), findsNothing);
+    expect(find.text('Nạp tiền demo'), findsNothing);
+  });
 
-  testWidgets('Nạp tiền demo cập nhật số dư ví ngay lập tức', (tester) async {
+  testWidgets('Nạp ví cập nhật số dư và trở về trang chủ', (tester) async {
     final service = FakeAuthService(acceptedPassword: '123456');
     await tester.pumpWidget(buildApp(service: service));
     await _login(tester, account: 'admin', password: '123456');
 
-    await tester.tap(find.text('Nạp tiền'));
+    await tester.tap(find.text('Nạp ví'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Chế độ demo'), findsOneWidget);
 
-    await tester.tap(find.text('Nạp tiền demo'));
+    await tester.tap(find.widgetWithText(AppButton, 'Nạp ví'));
     await tester.pumpAndSettle();
 
     expect(service.mockWalletBalance, 1100000);
     expect(find.text('1.100.000 đ'), findsOneWidget);
-    expect(find.text('Nạp demo 100.000 đ thành công!'), findsOneWidget);
+    expect(find.text('Nạp ví thành công!'), findsOneWidget);
   });
 
   testWidgets(
