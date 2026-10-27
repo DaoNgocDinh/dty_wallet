@@ -19,3 +19,4 @@ export 'transaction_history_screen.dart';
 export 'profile_screen.dart';
 export 'admin_users_screen.dart';
 export 'notifications_sheet.dart';
+export 'deposit_wallet_screen.dart';

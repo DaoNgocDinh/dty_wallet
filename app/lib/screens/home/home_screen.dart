@@ -1,3 +1,4 @@
+import '../deposit/deposit_wallet_screen.dart';
 export '../../utils/format_utils.dart' show formatVnd;
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -7,7 +8,6 @@ import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../state/app_session.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_button.dart';
 import '../profile/admin_users_screen.dart';
 import '../funds/funds_screen.dart';
 import '../bill_payment/bill_payment_screen.dart';
@@ -396,152 +396,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- 1. Bottom Sheet: Nạp ví ---
-  void _showDepositSheet(BuildContext context) {
-    final amountController = TextEditingController(text: '100000');
-    String selectedSource = 'Vietcombank (Liên kết)';
-    bool isSubmitting = false;
-    String? sheetError;
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetCtx) => StatefulBuilder(
-        builder: (context, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 24,
-            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Nạp tiền vào ví',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.of(sheetCtx).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Chế độ demo: tiền sẽ được cộng ngay vào ví, không thực hiện thanh toán thật.',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Số tiền nạp (VND)',
-                  prefixIcon: Icon(
-                    Icons.attach_money_rounded,
-                    color: AppColors.lightBlue,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: selectedSource,
-                decoration: const InputDecoration(
-                  labelText: 'Nguồn tiền',
-                  prefixIcon: Icon(
-                    Icons.account_balance_outlined,
-                    color: AppColors.lightBlue,
-                  ),
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'Vietcombank (Liên kết)',
-                    child: Text('Vietcombank (mô phỏng)'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'MB Bank (QR Pay)',
-                    child: Text('MB Bank (mô phỏng)'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Thẻ Quốc tế (Visa/Mastercard)',
-                    child: Text('Thẻ quốc tế (mô phỏng)'),
-                  ),
-                ],
-                onChanged: (v) =>
-                    setSheetState(() => selectedSource = v ?? selectedSource),
-              ),
-              if (sheetError != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  sheetError!,
-                  style: const TextStyle(color: AppColors.error, fontSize: 13),
-                ),
-              ],
-              const SizedBox(height: 20),
-              AppButton(
-                text: 'Nạp tiền demo',
-                isLoading: isSubmitting,
-                onPressed: () async {
-                  final amountText = amountController.text
-                      .trim()
-                      .replaceAll('.', '')
-                      .replaceAll(',', '');
-                  final amount = RegExp(r'^\d+$').hasMatch(amountText)
-                      ? double.tryParse(amountText)
-                      : null;
-                  if (amount == null || amount <= 0) {
-                    setSheetState(
-                      () => sheetError = 'Vui lòng nhập số tiền hợp lệ',
-                    );
-                    return;
-                  }
-                  setSheetState(() {
-                    isSubmitting = true;
-                    sheetError = null;
-                  });
-                  final navigator = Navigator.of(sheetCtx);
-                  final messenger = ScaffoldMessenger.of(context);
-                  try {
-                    await AppScope.of(context)
-                        .demoDeposit(amount: amount, source: selectedSource);
-                    if (!mounted) return;
-                    navigator.pop();
-                    await _loadWallet();
-                    if (!mounted) return;
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Nạp demo ${formatVnd(amount)} thành công!',
-                        ),
-                      ),
-                    );
-                  } on ApiException catch (e) {
-                    setSheetState(() => sheetError = e.message);
-                  } catch (_) {
-                    setSheetState(
-                      () => sheetError = 'Không thể nạp tiền, vui lòng thử lại',
-                    );
-                  } finally {
-                    setSheetState(() => isSubmitting = false);
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+  // --- 1. Chức năng Nạp tiền vào ví ---
+  Future<void> _openDepositScreen() async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const DepositWalletScreen()),
     );
+    if (result == true && mounted) {
+      await _loadWallet();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nạp ví thành công!')),
+      );
+    }
+  }
+
+  void _showDepositSheet(BuildContext context) {
+    _openDepositScreen();
   }
 
   // --- 2. Chức năng Nạp ĐT / Data ---
@@ -691,7 +561,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Tooltip(
                     message: 'Nạp tiền',
                     child: InkWell(
-                      onTap: () => _showDepositSheet(context),
+                      onTap: _openDepositScreen,
                       borderRadius: BorderRadius.circular(27),
                       child: Container(
                         width: 52,
@@ -1573,7 +1443,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: 'Nạp ví',
                 icon: Icons.add_card_rounded,
                 iconColor: const Color(0xFF2E7D32),
-                onTap: () => _showDepositSheet(context),
+                onTap: _openDepositScreen,
               ),
               _featureButton(
                 label: 'Nạp đt/data',

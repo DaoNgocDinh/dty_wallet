@@ -6,6 +6,7 @@ import 'package:dty_wallet/screens/bill_payment_screen.dart';
 import 'package:dty_wallet/screens/change_password_screen.dart';
 import 'package:dty_wallet/screens/create_fund_screen.dart';
 import 'package:dty_wallet/screens/contribute_fund_screen.dart';
+import 'package:dty_wallet/screens/deposit_wallet_screen.dart';
 import 'package:dty_wallet/screens/fund_detail_screen.dart';
 import 'package:dty_wallet/screens/funds_screen.dart';
 import 'package:dty_wallet/screens/invite_member_screen.dart';
@@ -1556,70 +1557,39 @@ void main() {
     },
   );
 
-  testWidgets('Trang chủ: Nút ẩn/hiện số dư nổi bật và hoạt động chính xác', (
-    tester,
-  ) async {
+  testWidgets('Trang chủ: Nút Nạp ví mở màn hình nạp riêng', (tester) async {
     await tester.pumpWidget(buildApp());
     await _login(tester, account: 'admin', password: '123456');
 
     expect(find.byType(HomeScreen), findsOneWidget);
-    // Ban đầu hiển thị số dư và nút "Ẩn"
-    expect(find.text('1.000.000 đ'), findsOneWidget);
-    expect(find.text('Ẩn'), findsOneWidget);
+    final depositBtn = find.text('Nạp ví');
+    expect(depositBtn, findsOneWidget);
+    expect(find.text('Nạp tiền'), findsNothing);
 
-    // Bấm nút Ẩn
-    await tester.tap(find.text('Ẩn'));
+    await tester.tap(depositBtn);
     await tester.pumpAndSettle();
 
-    // Số dư bị che và nút chuyển thành "Hiện"
-    expect(find.text('•••••••• đ'), findsOneWidget);
-    expect(find.text('Hiện'), findsOneWidget);
-
-    // Bấm nút Hiện
-    await tester.tap(find.text('Hiện'));
-    await tester.pumpAndSettle();
-
-    // Số dư hiện lại
-    expect(find.text('1.000.000 đ'), findsOneWidget);
-    expect(find.text('Ẩn'), findsOneWidget);
+    expect(find.byType(DepositWalletScreen), findsOneWidget);
+    expect(find.text('Nạp ví'), findsNWidgets(2));
+    expect(find.text('Nạp tiền vào ví'), findsNothing);
+    expect(find.text('Nạp tiền demo'), findsNothing);
   });
 
-  testWidgets(
-    'Trang chủ: Đã xoá nút Nạp tiền ở card số dư, nút tròn nạp tiền ở thanh dưới mở sheet Nạp tiền',
-    (tester) async {
-      await tester.pumpWidget(buildApp());
-      await _login(tester, account: 'admin', password: '123456');
-
-      expect(find.byType(HomeScreen), findsOneWidget);
-      // Đã xoá nút text 'Nạp tiền' ở card số dư
-      expect(find.text('Nạp tiền'), findsNothing);
-
-      // Nút hình tròn dấu cộng ở giữa thanh điều hướng dưới cùng
-      final depositBtn = find.byTooltip('Nạp tiền');
-      expect(depositBtn, findsOneWidget);
-
-      await tester.tap(depositBtn);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Nạp tiền vào ví'), findsOneWidget);
-    },
-  );
-
-  testWidgets('Nạp tiền demo cập nhật số dư ví ngay lập tức', (tester) async {
+  testWidgets('Nạp ví cập nhật số dư và trở về trang chủ', (tester) async {
     final service = FakeAuthService(acceptedPassword: '123456');
     await tester.pumpWidget(buildApp(service: service));
     await _login(tester, account: 'admin', password: '123456');
 
-    await tester.tap(find.byTooltip('Nạp tiền'));
+    await tester.tap(find.text('Nạp ví'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Chế độ demo'), findsOneWidget);
 
-    await tester.tap(find.text('Nạp tiền demo'));
+    await tester.tap(find.widgetWithText(AppButton, 'Nạp ví'));
     await tester.pumpAndSettle();
 
     expect(service.mockWalletBalance, 1100000);
     expect(find.text('1.100.000 đ'), findsOneWidget);
-    expect(find.text('Nạp demo 100.000 đ thành công!'), findsOneWidget);
+    expect(find.text('Nạp ví thành công!'), findsOneWidget);
   });
 
   testWidgets(
