@@ -86,7 +86,9 @@ exports.depositIntent = async function(req, res) {
 };
 
 exports.demoDeposit = async function(req, res) {
-  if (process.env.DEMO_DEPOSITS_ENABLED !== 'true') {
+  var isEnabled = process.env.DEMO_DEPOSITS_ENABLED === 'true' ||
+    (process.env.NODE_ENV !== 'production' && process.env.DEMO_DEPOSITS_ENABLED !== 'false');
+  if (!isEnabled) {
     return res.status(403).json({ error: 'Nạp tiền demo hiện chưa được bật' });
   }
 
