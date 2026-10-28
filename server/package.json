@@ -10,7 +10,9 @@
     "test:invite": "node ./test/run_tests.js invite_member_test.js",
     "test:withdraw": "node ./test/run_tests.js fund_withdraw_test.js",
     "test:couple": "node ./test/run_tests.js couple_fund_test.js",
-    "test:spending-jar": "node ./test/run_tests.js spending_jar_test.js",
+    "test:spending-jar": "node ./test/run_tests.js spending_jar_create_test.js spending_jar_details_test.js",
+    "test:spending-jar-create": "node ./test/run_tests.js spending_jar_create_test.js",
+    "test:spending-jar-details": "node ./test/run_tests.js spending_jar_details_test.js",
     "test:wallet-demo": "node ./test/run_tests.js wallet_demo_deposit_test.js"
   },
   "dependencies": {

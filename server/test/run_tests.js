@@ -9,7 +9,8 @@ var tests = [
   'admin_test.js',
   'fund_withdraw_test.js',
   'couple_fund_test.js',
-  'spending_jar_test.js',
+  'spending_jar_create_test.js',
+  'spending_jar_details_test.js',
   'wallet_demo_deposit_test.js'
 ];
 
