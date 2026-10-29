@@ -86,19 +86,35 @@ exports.depositIntent = async function(req, res) {
 };
 
 exports.demoDeposit = async function(req, res) {
-  var isEnabled = process.env.DEMO_DEPOSITS_ENABLED === 'true' ||
-    (process.env.NODE_ENV !== 'production' && process.env.DEMO_DEPOSITS_ENABLED !== 'false');
-  if (!isEnabled) {
+  if (process.env.DEMO_DEPOSITS_ENABLED !== 'true') {
     return res.status(403).json({ error: 'Nạp tiền demo hiện chưa được bật' });
   }
 
-  var amountValue = req.body.amount;
-  var amount = typeof amountValue === 'number' || typeof amountValue === 'string'
-    ? Number(amountValue)
-    : NaN;
   var source = String(req.body.source || '').trim();
-  if (!source || !Number.isFinite(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'Vui lòng nhập nguồn tiền và số tiền hợp lệ' });
+  if (!source) {
+    return res.status(400).json({ error: 'Vui lòng chọn nguồn nạp' });
+  }
+
+  var amountValue = req.body.amount;
+  var amount = NaN;
+
+  if (typeof amountValue === 'number') {
+    if (Number.isInteger(amountValue)) {
+      amount = amountValue;
+    }
+  } else if (typeof amountValue === 'string') {
+    var raw = amountValue.trim();
+    if (/^\d+$/.test(raw)) {
+      amount = Number(raw);
+    } else if (/^\d{1,3}(\.\d{3})+$/.test(raw)) {
+      amount = Number(raw.replace(/\./g, ''));
+    } else if (/^\d{1,3}(,\d{3})+$/.test(raw)) {
+      amount = Number(raw.replace(/,/g, ''));
+    }
+  }
+
+  if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'Vui lòng nhập số tiền hợp lệ' });
   }
 
   var user = await User.findById(req.user.id);

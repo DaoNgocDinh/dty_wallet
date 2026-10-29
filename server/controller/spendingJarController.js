@@ -11,13 +11,26 @@ exports.list = async function(req, res) {
 
 exports.create = async function(req, res) {
   var name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+  if (!name) {
+    return res.status(400).json({ error: 'Hãy nhập đầy đủ tên hũ' });
+  }
+  if (name.length > 50) {
+    return res.status(400).json({ error: 'Tên hũ không hợp lệ' });
+  }
+
   var amountValue = req.body.amount;
+  if (amountValue === undefined || amountValue === null || String(amountValue).trim() === '') {
+    return res.status(400).json({ error: 'Hãy cung cấp tiền cho hũ' });
+  }
+
   var amount = typeof amountValue === 'number' || typeof amountValue === 'string'
     ? Number(amountValue)
     : NaN;
-  if (!name || name.length > 100 || !Number.isFinite(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'Tên hũ không hợp lệ hoặc số tiền phải lớn hơn 0' });
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'Số tiền cung cấp phải lớn hơn 0' });
   }
+
   var escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   var existingJar = await SpendingJar.findOne({
     userId: req.user.id,
@@ -36,7 +49,7 @@ exports.create = async function(req, res) {
     { new: true }
   );
   if (!debited) {
-    return res.status(400).json({ error: 'Số dư ví không đủ để tạo hũ chi tiêu' });
+    return res.status(400).json({ error: 'Bạn không đủ tiền trong ví để cung cấp cho hũ' });
   }
   var jar;
   try {
@@ -60,7 +73,7 @@ exports.create = async function(req, res) {
         }
       });
     } catch (_) {}
-    res.status(201).json({ jar: jar, walletBalance: debited.walletBalance });
+    res.status(201).json({ message: 'Tạo hũ mới thành công!', jar: jar, walletBalance: debited.walletBalance });
   } catch (error) {
     if (jar) await SpendingJar.deleteOne({ _id: jar.id });
     await User.updateOne({ _id: req.user.id }, { $inc: { walletBalance: amount } });

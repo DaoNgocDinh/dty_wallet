@@ -15,7 +15,8 @@ var tests = [
   'topup_test.js',
   'bill_payment_test.js',
   'feature_search_test.js',
-  'spending_jar_test.js',
+  'spending_jar_create_test.js',
+  'spending_jar_details_test.js',
   'wallet_demo_deposit_test.js'
 ];
 
