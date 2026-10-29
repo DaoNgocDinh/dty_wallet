@@ -4,8 +4,11 @@ var spawnSync = require('child_process').spawnSync;
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 var tests = [
+  'create_fund_test.js',
+  'contribute_fund_test.js',
   'fund_test.js',
   'invite_member_test.js',
+  'fund_three_features_test.js',
   'admin_test.js',
   'fund_withdraw_test.js',
   'couple_fund_test.js',
